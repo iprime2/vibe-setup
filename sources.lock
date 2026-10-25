@@ -1,0 +1,23 @@
+# Allowed sources and pins for bootstrap.sh. Nothing outside this file is ever fetched.
+# Sourced by bash: plain KEY="value" lines only.
+# To update a pin: review the upstream diff first, then change the SHA (and the hash) here.
+
+# Graphify: PyPI package "graphifyy" (double y). Repo: github.com/Graphify-Labs/graphify
+GRAPHIFY_SPEC="graphifyy==0.9.77"
+
+# Ponytail: github.com/DietrichGebert/ponytail (MIT). Commit of 2026-10-08.
+# The sha256 is of skills/ponytail/SKILL.md at that commit; it was read in full before pinning.
+PONYTAIL_REPO="DietrichGebert/ponytail"
+PONYTAIL_SHA="2a1fe842d078cf66ec7f3e6096a8ca4279c2cad7"
+PONYTAIL_SKILL_SHA256="ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c"
+
+# Agent Skills: github.com/addyosmani/agent-skills (MIT). Commit of 2026-10-03.
+# Pinned, not audited line by line.
+AGENT_SKILLS_REPO="addyosmani/agent-skills"
+AGENT_SKILLS_SHA="1401c8b8030e023baeebb31781a6653fe8e93026"
+
+# What to copy from agent-skills (skills/<name>, .claude/commands/<name>.md, agents/*.md).
+# Not included on purpose; /code-simplify needs code-simplification, and /test plus the
+# web-performance-auditor agent need browser-testing-with-devtools. bootstrap.sh warns about these.
+AGENT_SKILLS_LIST="interview-me spec-driven-development planning-and-task-breakdown incremental-implementation test-driven-development debugging-and-error-recovery code-review-and-quality security-and-hardening frontend-ui-engineering git-workflow-and-versioning shipping-and-launch doubt-driven-development"
+AGENT_COMMANDS="spec plan build test review code-simplify ship"
