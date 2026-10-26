@@ -49,8 +49,8 @@ run() { echo "+ $*"; if [ "$DRY" != 1 ]; then "$@"; fi; }
 die() { echo "STOP: $*" >&2; exit 1; }
 sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
 has() { case " $1 " in *" $2 "*) return 0 ;; esac; return 1; }
-# path_of LIST NAME: the <plugin>/<skill> entry of LIST whose skill is NAME
-path_of() { local e; for e in $1; do if [ "${e#*/}" = "$2" ]; then echo "$e"; return 0; fi; done; return 1; }
+# path_of LIST NAME: the repo-relative path in LIST whose last part is NAME
+path_of() { local e; for e in $1; do if [ "${e##*/}" = "$2" ]; then echo "$e"; return 0; fi; done; return 1; }
 
 # fetch_commit REPO SHA DIR: shallow fetch of exactly one commit; STOP unless HEAD is that commit.
 fetch_commit() {
@@ -71,7 +71,7 @@ check_pinned_skills() {
   [ -f "$2/LICENSE" ] || die "$1 has no LICENSE at the pinned commit. Not installing."
   for n in $4; do
     p="$(path_of "$3" "$n")"
-    d="$2/plugins/${p%%/*}/skills/$n"
+    d="$2/$p"
     [ -f "$d/SKILL.md" ] || die "$1 skill missing at the pinned commit: $p"
     [ -z "$(find "$d" -type l)" ] || die "$1 skill $n contains symlinks. Not installing."
     if grep -rqE 'CLAUDE_PLUGIN_ROOT|mcp__' "$d" || [ -n "$(find "$d" -name .mcp.json -o -name hooks.json)" ]; then
@@ -86,7 +86,7 @@ install_pinned_skills() {
   for n in $3; do
     p="$(path_of "$2" "$n")"
     run rm -rf "${CLAUDE_DIR:?}/skills/$n"
-    run cp -R "$1/plugins/${p%%/*}/skills/$n" "$CLAUDE_DIR/skills/$n"
+    run cp -R "$1/$p" "$CLAUDE_DIR/skills/$n"
     run cp "$1/LICENSE" "$CLAUDE_DIR/skills/$n/LICENSE"
   done
 }
@@ -126,7 +126,7 @@ fi
 
 # Resolve packs into items before anything is installed. Pack names are checked against packs.conf,
 # third-party skills against the pins in sources.lock, and a skill name may come from one source only.
-SEL_PACKS="" FP_SKILLS="" FP_AGENTS="" FP_COMMANDS="" TOB_SEL="" WSH_SEL=""
+SEL_PACKS="" FP_SKILLS="" FP_AGENTS="" FP_COMMANDS="" TOB_SEL="" WSH_SEL="" ECC_SEL=""
 for p in ${PACK_ARGS//,/ }; do
   if [ "$p" = all ]; then p="$PACKS"; fi
   for q in $p; do
@@ -163,7 +163,11 @@ for p in $SEL_PACKS; do
         if has "$WSH_SEL" "$n"; then continue; fi
         path_of "$WSHOBSON_SKILL_PATHS" "$n" >/dev/null || die "pack $p: $n is not pinned in WSHOBSON_SKILL_PATHS"
         take_skill "$n"; WSH_SEL="${WSH_SEL:+$WSH_SEL }$n" ;;
-      *) die "pack $p: unknown item '$it' (expected skill:, agent:, command:, tob: or wsh:)" ;;
+      ecc:*)
+        if has "$ECC_SEL" "$n"; then continue; fi
+        path_of "$ECC_SKILL_PATHS" "$n" >/dev/null || die "pack $p: $n is not pinned in ECC_SKILL_PATHS"
+        take_skill "$n"; ECC_SEL="${ECC_SEL:+$ECC_SEL }$n" ;;
+      *) die "pack $p: unknown item '$it' (expected skill:, agent:, command:, tob:, wsh: or ecc:)" ;;
     esac
   done
 done
@@ -180,7 +184,7 @@ done
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-src="$tmp/agent-skills" tobsrc="$tmp/trailofbits" wshsrc="$tmp/wshobson"
+src="$tmp/agent-skills" tobsrc="$tmp/trailofbits" wshsrc="$tmp/wshobson" eccsrc="$tmp/ecc"
 
 echo "== fetch and check the pinned sources (nothing is installed until all pass)"
 echo "-- ponytail @ ${PONYTAIL_SHA:0:8}"
@@ -208,6 +212,11 @@ if [ -n "$WSH_SEL" ]; then
   echo "-- wshobson/agents @ ${WSHOBSON_SHA:0:8}"
   fetch_commit "$WSHOBSON_REPO" "$WSHOBSON_SHA" "$wshsrc"
   check_pinned_skills "$WSHOBSON_REPO" "$wshsrc" "$WSHOBSON_SKILL_PATHS" "$WSH_SEL"
+fi
+if [ -n "$ECC_SEL" ]; then
+  echo "-- ECC @ ${ECC_SHA:0:8}"
+  fetch_commit "$ECC_REPO" "$ECC_SHA" "$eccsrc"
+  check_pinned_skills "$ECC_REPO" "$eccsrc" "$ECC_SKILL_PATHS" "$ECC_SEL"
 fi
 
 echo "== graphify ($GRAPHIFY_SPEC)"
@@ -246,6 +255,7 @@ if [ -n "$SEL_PACKS" ]; then
   for c in $FP_COMMANDS; do run cp "$HERE/commands/$c.md" "$CLAUDE_DIR/commands/$c.md"; done
   install_pinned_skills "$tobsrc" "$TOB_SKILL_PATHS" "$TOB_SEL"
   install_pinned_skills "$wshsrc" "$WSHOBSON_SKILL_PATHS" "$WSH_SEL"
+  install_pinned_skills "$eccsrc" "$ECC_SKILL_PATHS" "$ECC_SEL"
 fi
 
 # Project scope: remember exactly what upstream looked like, so tailoring can be diffed and captured.
@@ -262,7 +272,7 @@ if [ "$SCOPE" = project ]; then
   done
   run rm -rf "${snap:?}"
   run mkdir -p "$snap/skills" "$snap/commands" "$snap/agents"
-  for s in ponytail $AGENT_SKILLS_LIST $FP_SKILLS $TOB_SEL $WSH_SEL; do run cp -R "$CLAUDE_DIR/skills/$s" "$snap/skills/$s"; done
+  for s in ponytail $AGENT_SKILLS_LIST $FP_SKILLS $TOB_SEL $WSH_SEL $ECC_SEL; do run cp -R "$CLAUDE_DIR/skills/$s" "$snap/skills/$s"; done
   for c in $AGENT_COMMANDS $FP_COMMANDS; do run cp "$CLAUDE_DIR/commands/$c.md" "$snap/commands/$c.md"; done
   for a in "$src"/agents/*.md; do run cp "$CLAUDE_DIR/agents/$(basename "$a")" "$snap/agents/"; done
   for a in $FP_AGENTS; do run cp "$CLAUDE_DIR/agents/$a.md" "$snap/agents/"; done
@@ -278,7 +288,8 @@ if [ -n "$PROFILE" ]; then
   echo "== profile $PROFILE"
   if [ "${PROFILE_AGENT_SKILLS_SHA:-}" != "$AGENT_SKILLS_SHA" ] || [ "${PROFILE_PONYTAIL_SHA:-}" != "$PONYTAIL_SHA" ] \
      || { [ -n "$TOB_SEL" ] && [ "${PROFILE_TOB_SHA:-$TOB_SHA}" != "$TOB_SHA" ]; } \
-     || { [ -n "$WSH_SEL" ] && [ "${PROFILE_WSHOBSON_SHA:-$WSHOBSON_SHA}" != "$WSHOBSON_SHA" ]; }; then
+     || { [ -n "$WSH_SEL" ] && [ "${PROFILE_WSHOBSON_SHA:-$WSHOBSON_SHA}" != "$WSHOBSON_SHA" ]; } \
+     || { [ -n "$ECC_SEL" ] && [ "${PROFILE_ECC_SHA:-$ECC_SHA}" != "$ECC_SHA" ]; }; then
     echo "WARN: profile '$PROFILE' was tailored against different pins than sources.lock now has; re-review its CHANGES.diff before relying on it"
   fi
   if [ -d "$pdir/overrides" ]; then run cp -R "$pdir/overrides/." "$CLAUDE_DIR/"; fi
@@ -306,7 +317,7 @@ if [ "$DRY" != 1 ]; then
   # Names are matched whole, hyphens included: "code-review" does not match "code-review-and-quality".
   # One-word names ("scan") are ordinary words in prose, so only hyphenated names are checked.
   scan=("$CLAUDE_DIR"/commands/*.md "$CLAUDE_DIR"/agents/*.md)
-  for s in $FP_SKILLS $TOB_SEL $WSH_SEL; do
+  for s in $FP_SKILLS $TOB_SEL $WSH_SEL $ECC_SEL; do
     if [ -f "$CLAUDE_DIR/skills/$s/SKILL.md" ]; then scan+=("$CLAUDE_DIR/skills/$s/SKILL.md"); fi
   done
   known=""
@@ -314,6 +325,7 @@ if [ "$DRY" != 1 ]; then
   for f in "$HERE"/agents/*.md; do known="$known agent:$(basename "$f" .md)"; done
   if [ -n "$TOB_SEL" ]; then for d in "$tobsrc"/plugins/*/skills/*/; do known="$known skill:$(basename "$d")"; done; fi
   if [ -n "$WSH_SEL" ]; then for d in "$wshsrc"/plugins/*/skills/*/; do known="$known skill:$(basename "$d")"; done; fi
+  if [ -n "$ECC_SEL" ]; then for d in "$eccsrc"/skills/*/; do known="$known skill:$(basename "$d")"; done; fi
   for k in $known; do
     n="${k#*:}"
     case "$n" in *-*) ;; *) continue ;; esac

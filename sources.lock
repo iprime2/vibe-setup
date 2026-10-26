@@ -22,9 +22,10 @@ AGENT_SKILLS_SHA="1401c8b8030e023baeebb31781a6653fe8e93026"
 AGENT_SKILLS_LIST="interview-me spec-driven-development planning-and-task-breakdown incremental-implementation test-driven-development debugging-and-error-recovery code-review-and-quality security-and-hardening frontend-ui-engineering git-workflow-and-versioning shipping-and-launch doubt-driven-development code-simplification browser-testing-with-devtools performance-optimization"
 AGENT_COMMANDS="spec plan build test review code-simplify ship"
 
-# The two sources below are fetched only when a --pack needs them (see packs.conf).
+# The sources below are fetched only when a --pack needs them (see packs.conf).
 # Only the skill folders listed are copied, never a whole plugin, and the upstream LICENSE is
-# copied into each one. Paths are <plugin>/<skill>, under plugins/ at the pinned commit.
+# copied into each one. Paths are relative to the repository root at the pinned commit; the last
+# part of each path is the skill's name.
 
 # Trail of Bits skills: github.com/trailofbits/skills (CC-BY-SA-4.0). Commit of 2026-10-23.
 # Audited line by line: every file in the listed skill folders was read in full on 2026-10-26.
@@ -35,7 +36,7 @@ AGENT_COMMANDS="spec plan build test review code-simplify ship"
 # (reads the gh CLI token). From building-secure-contracts only the general and EVM skills are listed.
 TOB_REPO="trailofbits/skills"
 TOB_SHA="196a9073ab10d35bacf111f945e02c00b2c6883a"
-TOB_SKILL_PATHS="entry-point-analyzer/entry-point-analyzer modern-cpp/modern-cpp property-based-testing/property-based-testing building-secure-contracts/secure-workflow-guide building-secure-contracts/guidelines-advisor building-secure-contracts/token-integration-analyzer building-secure-contracts/code-maturity-assessor building-secure-contracts/audit-prep-assistant"
+TOB_SKILL_PATHS="plugins/entry-point-analyzer/skills/entry-point-analyzer plugins/modern-cpp/skills/modern-cpp plugins/property-based-testing/skills/property-based-testing plugins/building-secure-contracts/skills/secure-workflow-guide plugins/building-secure-contracts/skills/guidelines-advisor plugins/building-secure-contracts/skills/token-integration-analyzer plugins/building-secure-contracts/skills/code-maturity-assessor plugins/building-secure-contracts/skills/audit-prep-assistant"
 
 # wshobson/agents: github.com/wshobson/agents (MIT). Commit of 2026-10-17.
 # Audited line by line: every file in the listed skill folders was read in full on 2026-10-26.
@@ -43,4 +44,13 @@ TOB_SKILL_PATHS="entry-point-analyzer/entry-point-analyzer modern-cpp/modern-cpp
 # commands); see README.md.
 WSHOBSON_REPO="wshobson/agents"
 WSHOBSON_SHA="0874a27b17a22e2b7c2e2bcd725768e0803cad06"
-WSHOBSON_SKILL_PATHS="observability-monitoring/prometheus-configuration incident-response/postmortem-writing"
+WSHOBSON_SKILL_PATHS="plugins/observability-monitoring/skills/prometheus-configuration plugins/incident-response/skills/postmortem-writing"
+
+# ECC (Everything Claude Code): github.com/affaan-m/ECC (MIT). Release 2.2.3, commit of 2026-10-26.
+# Audited line by line: every file in the listed skill folders was read in full on 2026-10-26.
+# Nothing else from ECC is used: no agents, commands, hooks, rules, MCP configuration, installer,
+# CLI or plugin. The rest of its 311 skills was not adopted (outside the packs, overlapping, or
+# dependent on the ECC plugin, CLI or MCP); see README.md.
+ECC_REPO="affaan-m/ECC"
+ECC_SHA="25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b"
+ECC_SKILL_PATHS="skills/rust-patterns skills/rust-testing skills/cpp-testing skills/evm-token-decimals skills/defi-amm-security skills/react-native-patterns"

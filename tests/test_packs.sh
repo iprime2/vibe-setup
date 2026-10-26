@@ -11,11 +11,12 @@ packvar() { ( . "$REPO/packs.conf"; eval "printf '%s' \"\${$1}\"" ); }
 ALL_PACKS="$(packvar PACKS)"
 ALL_ITEMS=""; for p in $ALL_PACKS; do ALL_ITEMS="$ALL_ITEMS $(packvar "PACK_$p")"; done
 n_kind() { printf '%s\n' $ALL_ITEMS | grep -c "^$1:"; }
-NPSKILLS=$(( $(n_kind skill) + $(n_kind tob) + $(n_kind wsh) ))
+NPSKILLS=$(( $(n_kind skill) + $(n_kind tob) + $(n_kind wsh) + $(n_kind ecc) ))
 NPCMDS=$(n_kind command)
 NPAGENTS=$(n_kind agent)
 TOB1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^tob:' | cut -d: -f2)"
 WSH1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^wsh:' | cut -d: -f2)"
+ECC1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^ecc:' | cut -d: -f2)"
 item_path() { case "$2" in agent:*) echo "$1/agents/${2#*:}.md" ;; command:*) echo "$1/commands/${2#*:}.md" ;; *) echo "$1/skills/${2#*:}/SKILL.md" ;; esac; }
 show_warns() { printf '%s\n' "$OUT" | grep '^WARN' | sed 's/^/    info: /'; }
 
@@ -75,6 +76,7 @@ capture bash "$REPO/bootstrap.sh" --pack all --dry-run
 expect_rc "user scope, all packs: exits 0" 0
 expect_out "it plans the Trail of Bits fetch at the pin" "fetch -q --depth 1 origin $(lockvar "$REPO" TOB_SHA)"
 expect_out "and the wshobson fetch at the pin" "fetch -q --depth 1 origin $(lockvar "$REPO" WSHOBSON_SHA)"
+expect_out "and the ECC fetch at the pin" "fetch -q --depth 1 origin $(lockvar "$REPO" ECC_SHA)"
 expect_out "and copies this repo's skills" "cp -R $REPO/skills/system-design"
 capture bash "$REPO/bootstrap.sh" --scope project --pack roles --dry-run
 expect_rc "project scope, one pack: exits 0" 0
@@ -96,10 +98,11 @@ n=$(count "$C/commands"); want=$((NCMDS + NPCMDS))
 if [ "$n" -eq "$want" ]; then ok "commands: $want"; else bad "commands: $n, wanted $want"; fi
 missing=""; for it in $ALL_ITEMS; do [ -f "$(item_path "$C" "$it")" ] || missing="$missing $it"; done
 if [ -z "$missing" ]; then ok "every pack item is installed"; else bad "missing:$missing"; fi
-lic=""; for it in $ALL_ITEMS; do case "$it" in tob:*|wsh:*) [ -f "$C/skills/${it#*:}/LICENSE" ] || lic="$lic ${it#*:}" ;; esac; done
+lic=""; for it in $ALL_ITEMS; do case "$it" in tob:*|wsh:*|ecc:*) [ -f "$C/skills/${it#*:}/LICENSE" ] || lic="$lic ${it#*:}" ;; esac; done
 if [ -z "$lic" ]; then ok "every third-party skill has its upstream LICENSE"; else bad "no LICENSE in:$lic"; fi
 check "Trail of Bits copies carry CC-BY-SA-4.0" grep -q "Attribution-ShareAlike 4.0" "$C/skills/$TOB1/LICENSE"
 check "wshobson copies carry the MIT licence" grep -q "MIT License" "$C/skills/$WSH1/LICENSE"
+check "ECC copies carry the MIT licence" grep -q "MIT License" "$C/skills/$ECC1/LICENSE"
 check "no installed skill needs CLAUDE_PLUGIN_ROOT" bash -c "! grep -rlq CLAUDE_PLUGIN_ROOT '$C/skills'"
 ro=""; for it in $ALL_ITEMS; do case "$it" in agent:*) grep -qx 'tools: Read, Grep, Glob' "$C/agents/${it#*:}.md" || ro="$ro ${it#*:}" ;; esac; done
 if [ -z "$ro" ]; then ok "the $NPAGENTS role agents are read-only (Read, Grep, Glob)"; else bad "not read-only:$ro"; fi
@@ -129,7 +132,7 @@ check "nothing was installed in that HOME" test ! -e "$H2/.claude"
 
 echo "== a pinned skill that needs plugin-only features is refused"
 copy_repo "$W/tob-plugin"
-sed -i.bak 's#^TOB_SKILL_PATHS=.*#TOB_SKILL_PATHS="rust-review/rust-review"#' "$W/tob-plugin/sources.lock"
+sed -i.bak 's#^TOB_SKILL_PATHS=.*#TOB_SKILL_PATHS="plugins/rust-review/skills/rust-review"#' "$W/tob-plugin/sources.lock"
 sed -i.bak 's/^PACK_systems=.*/PACK_systems="tob:rust-review"/' "$W/tob-plugin/packs.conf"
 H3="$W/home-plugin"; mkdir -p "$H3" "$W/c-plugin"; cd "$W/c-plugin" || exit 2
 capture env HOME="$H3" bash "$W/tob-plugin/bootstrap.sh" --pack systems

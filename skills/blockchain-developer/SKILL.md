@@ -44,6 +44,9 @@ once, and reconcile every day.
 - Read token transfers from logs and handle internal transfers; handle several outputs to one address.
 - Credit only tokens on an allow-list of contract addresses. Tokens with a familiar symbol from an
   unknown contract are spoofs, not deposits. Apply dust thresholds.
+- Read each token's decimals from its contract, keyed by (chain id, contract address), and store them with
+  the allow-list entry. If the call fails, refuse the token (fail closed). Never default to 18 decimals,
+  even though the evm-token-decimals skill shows that fallback; for money the rule here wins.
 
 ## Deposit Address Derivation
 

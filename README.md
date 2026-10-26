@@ -34,10 +34,11 @@ Another Claude session cannot answer for you: agents treat relayed messages as d
 | Agent Skills | github.com/addyosmani/agent-skills | commit |
 | Trail of Bits skills (packs only) | github.com/trailofbits/skills, CC-BY-SA-4.0 | commit + listed skill folders |
 | wshobson agents (packs only) | github.com/wshobson/agents, MIT | commit + listed skill folders |
+| ECC (packs only) | github.com/affaan-m/ECC, MIT | commit + listed skill folders |
 
 From Agent Skills it copies the skills, slash commands (with the `agent-skills:` prefix stripped, because they
 are installed as plain files, not as a plugin) and agents named in `sources.lock`: 15 skills, 7 commands and
-4 agents at the current pins. The last two sources are fetched only when a `--pack` needs them, and only the
+4 agents at the current pins. The last three sources are fetched only when a `--pack` needs them, and only the
 skill folders listed in `sources.lock` are copied, each with its upstream `LICENSE`.
 
 `bootstrap.sh` fetches and checks every source it needs before it installs anything, and stops with nothing
@@ -53,11 +54,11 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 |---|---|---|
 | `roles` | agents `lead-engineer`, `senior-engineer`, `mid-level-engineer`; command `/tiered-review`; skill `system-design` | |
 | `quant` | `quant-researcher`, `quant-developer` | |
-| `systems` | `rust-developer`, `cpp-developer`, `low-latency-systems` | ToB `modern-cpp` |
-| `web3` | `blockchain-developer`, `solidity-developer`, `web3-integration`, `crypto-custody-and-keys` | ToB `entry-point-analyzer`, and from building-secure-contracts: `secure-workflow-guide`, `guidelines-advisor`, `token-integration-analyzer`, `code-maturity-assessor`, `audit-prep-assistant` |
+| `systems` | `rust-developer`, `cpp-developer`, `low-latency-systems` | ToB `modern-cpp`; ECC `rust-patterns`, `rust-testing`, `cpp-testing` |
+| `web3` | `blockchain-developer`, `solidity-developer`, `web3-integration`, `crypto-custody-and-keys` | ToB `entry-point-analyzer`, and from building-secure-contracts: `secure-workflow-guide`, `guidelines-advisor`, `token-integration-analyzer`, `code-maturity-assessor`, `audit-prep-assistant`; ECC `evm-token-decimals`, `defi-amm-security` |
 | `fintech` | `financial-ledger`, `kyc-aml-compliance` | |
 | `security` | | ToB `property-based-testing` |
-| `mobile` | `react-native-expo` | |
+| `mobile` | `react-native-expo` | ECC `react-native-patterns` |
 | `ops` | | wshobson `prometheus-configuration`, `postmortem-writing` |
 
 The role agents are read-only (`tools: Read, Grep, Glob`). `/tiered-review` picks the tier from the diff
@@ -65,7 +66,12 @@ The role agents are read-only (`tools: Read, Grep, Glob`). `/tiered-review` pick
 APIs and cross-service contracts), runs that agent, and follows its escalations. It does not replace `/review`.
 Everything here is generic: product-, employer- and country-specific rules belong in a profile.
 
-**Licences.** Trail of Bits skills are CC-BY-SA-4.0 and wshobson skills MIT; their `LICENSE` sits in each
+Where a third-party skill in a pack is looser than the skill written here, the skill written here says so and
+wins: `blockchain-developer` refuses a token whose `decimals()` call fails (`evm-token-decimals` falls back to
+18), and `rust-developer` keeps `expect()` and `panic!` out of production paths (some `rust-patterns` and
+`rust-testing` examples use them).
+
+**Licences.** Trail of Bits skills are CC-BY-SA-4.0, wshobson and ECC skills MIT; their `LICENSE` sits in each
 installed copy. A tailored override of one of them is a derivative work: it must keep the attribution and, for
 Trail of Bits, stay under CC-BY-SA-4.0. `profile_save.sh` copies the `LICENSE` into the override folder for
 that reason.
@@ -87,6 +93,12 @@ that reason.
 | wshobson `distributed-tracing`, `grafana-dashboards` | Deprecated Jaeger exporter and legacy Grafana panels and alerts |
 | wshobson `incident-runbook-templates` | Wrong or risky commands in its runbooks (invalid SQL, `VACUUM FULL` during an incident) |
 | wshobson `on-call-handoff-patterns`, `connectivity-triage` | A human process with little use to a coding agent; macOS-only |
+| ECC agents (71), commands (97), hooks (27), rule packs (22), MCP config | Agents pin a model and most have Bash, `code-reviewer` and `/plan` clash with Agent Skills; hooks run Node on every tool call and inject memory at session start; rules load into every session |
+| ECC installer, CLI, plugin `ecc@ecc`, other-harness configs, docs | `bootstrap.sh` copies pinned folders instead; only Claude Code is targeted |
+| ECC `llm-trading-agent-security` | Takes the signing key from an environment variable and relies on a regex injection filter, against `crypto-custody-and-keys` |
+| ECC `latency-critical-systems`, `cpp-coding-standards`, `architecture-decision-records`, `tdd-workflow` | Covered by `low-latency-systems`, ToB `modern-cpp`, `system-design` and Agent Skills TDD |
+| ECC `security-review` | Clashes with Claude Code's built-in `security-review` |
+| The other ECC skills (about 290) | Outside the packs, or need the ECC plugin, CLI or an MCP server (13 do) |
 
 Agent Skills itself has `observability-and-instrumentation` at the current pin; adding it to `AGENT_SKILLS_LIST`
 is the simplest route to generic observability guidance.
@@ -150,7 +162,7 @@ is private, but the files are plain text in git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 145 checks
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 147 checks
 when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
 - Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
@@ -203,9 +215,9 @@ so they never do.
 ## Updating a pin
 
 Review the upstream diff first. Then change the SHA (and, for Ponytail, the sha256 of `SKILL.md`) in
-`sources.lock`, run `--dry-run`, and open a pull request. For Trail of Bits and wshobson, read every changed file
-in the listed skill folders in full (they are marked "audited line by line"), check that each folder still
-lives at the same `<plugin>/<skill>` path, and update the audit date in `sources.lock`.
+`sources.lock`, run `--dry-run`, and open a pull request. For Trail of Bits, wshobson and ECC, read every changed
+file in the listed skill folders in full (they are marked "audited line by line"), check that each folder still
+lives at the same path, and update the audit date in `sources.lock`.
 
 Ponytail was reviewed against upstream `main` (`09c434ab`) on 2026-10-26. Since the pin, only commit `df9e8994`
 (2026-10-16) changes `skills/ponytail/SKILL.md`: it adds `off` to the frontmatter `argument-hint`. Ponytail's

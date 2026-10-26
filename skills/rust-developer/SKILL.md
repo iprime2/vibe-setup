@@ -20,6 +20,8 @@ the end must pass before a change is done.
   scripts and examples.
 - Enforce it in the crate root:
   `#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used, clippy::panic))]`.
+- Some examples in rust-patterns and rust-testing call `expect()` or `panic!` outside tests. They
+  illustrate other points; on production paths the rule here wins.
 
 ## Async with tokio
 
