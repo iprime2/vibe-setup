@@ -51,6 +51,7 @@ if [ -n "$PROFILE" ]; then
       case "$(basename "$e")" in skills|commands|agents) ;; *) die "profile overrides may only contain skills/, commands/ and agents/ (found $(basename "$e"))" ;; esac
     done < <(find "$pdir/overrides" -mindepth 1 -maxdepth 1)
     [ -z "$(find "$pdir/overrides" -type l)" ] || die "profile overrides must not contain symlinks"
+    [ ! -e "$pdir/overrides/skills/graphify" ] || die "profile overrides must not change graphify's skill"
   fi
   if [ -f "$pdir/remove.txt" ]; then
     while IFS= read -r rel || [ -n "$rel" ]; do

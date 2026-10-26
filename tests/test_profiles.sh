@@ -107,5 +107,20 @@ mkevil evil4; mkdir -p "$R/profiles/evil4/overrides/skills/x"; ln -s /etc/passwd
 evil evil4 "symlinks"
 mkevil evil5; printf '/etc/passwd\n' > "$R/profiles/evil5/remove.txt"
 evil evil5 "unsafe path"
+mkevil evil6; printf 'skills/\n' > "$R/profiles/evil6/remove.txt"
+evil evil6 "unsafe path"
+mkevil evil7; printf 'commands//\n' > "$R/profiles/evil7/remove.txt"
+evil evil7 "unsafe path"
+mkevil evil8; printf 'skills/graphify\n' > "$R/profiles/evil8/remove.txt"
+evil evil8 "must not name graphify"
+mkevil evil9; mkdir -p "$R/profiles/evil9/overrides/skills/graphify"; echo x > "$R/profiles/evil9/overrides/skills/graphify/SKILL.md"
+evil evil9 "must not change graphify"
+
+echo "== a removal that only starts with 'graphify' is still accepted"
+mkevil okname; printf 'skills/graphify-notes\n' > "$R/profiles/okname/remove.txt"
+mkdir -p "$W/ok"; cd "$W/ok" || exit 2
+capture bash "$R/bootstrap.sh" --scope project --profile okname --dry-run
+expect_rc "the dry run exits 0" 0
+expect_out "and plans the removal" "rm -rf .*/skills/graphify-notes"
 
 finish

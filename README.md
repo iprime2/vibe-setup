@@ -81,8 +81,8 @@ interview you about your product, propose tweaks, and apply only the ones you ap
    was saved.
 
 `bootstrap.sh` validates a profile before it installs anything and refuses one that writes outside
-`skills/`, `commands/` and `agents/` (no settings or hooks), contains symlinks, or lists unsafe removals
-(anything outside those folders, one of the folders as a whole, or graphify's skill).
+`skills/`, `commands/` and `agents/` (no settings or hooks), changes or removes graphify's skill, contains
+symlinks, or lists unsafe removals (anything outside those folders, or one of the folders as a whole).
 A profile cannot change `settings.json`.
 
 Keep confidential details (including employer-specific ones) out of `PROJECT.md` and the overrides: this repo
@@ -90,7 +90,7 @@ is private, but the files are plain text in git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 81 checks
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 87 checks
 when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
 - Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
@@ -100,8 +100,9 @@ when this was written). They never touch the real `~/.claude` or uv tools. The c
 
 - Profiles: tweak, remove and add files in a project install, capture with `profile_save.sh`, replay in a fresh
   project (all changes present, `PROJECT.md` block once), re-run, re-save and compare (identical), pin-drift
-  warning, "nothing to save", and five hostile profiles (settings override, `../` and absolute removals,
-  non-skill removal, symlink) all refused with nothing installed.
+  warning, "nothing to save", and nine hostile profiles (settings override, `../` and absolute removals,
+  non-skill removal, symlink, removal of a whole folder (two forms), removal or override of graphify's skill)
+  all refused with nothing installed.
 
 Fresh cloud sessions (2026-10-26; two sessions started from this prompt, one with nothing attached and
 `skip tailoring`, one on a public project repo):
