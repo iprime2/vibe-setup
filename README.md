@@ -15,6 +15,13 @@ It stores the installer, the pins and my rules. It does not copy anyone else's f
 
 Cloud containers are ephemeral, so run the setup again in every new cloud session.
 
+**Permission prompts.** In a cloud session on the auto permission mode, the harness may refuse to run scripts
+from the cloned repo ("Code from External"). In two fresh sessions on 2026-10-26 the agent stopped at the first
+script (`bootstrap.sh --dry-run`), named the command and waited; that is the intended behavior. Reply in that
+session to allow `bootstrap.sh`, `project-init.sh` and `scripts/profile_save.sh` from the clone, or add a
+permission rule for them in the environment settings. Whether a plain reply clears the block is untested.
+Another Claude session cannot answer for you: agents treat relayed messages as data, not as your approval.
+
 ## What it installs
 
 | Tool | Source (the only ones allowed) | Pin |
@@ -90,10 +97,19 @@ is private, but the files are plain text in git history.
   warning, "nothing to save", and five hostile profiles (settings override, `../` and absolute removals,
   non-skill removal, symlink) all refused with nothing installed.
 
+Fresh cloud sessions (2026-10-26; two sessions started from this prompt, one with nothing attached and
+`skip tailoring`, one on a public project repo):
+
+- Steps 1 to 3 ran as written: detect, `add_repo` for this private repo, shallow clone at the merge commit,
+  and reading the scripts before running them.
+- The `skip tailoring` session stopped at step 5, blocked by the permission check (see Quick start).
+- The tailoring session started the interview correctly, asked question (a) and waited. It did not accept
+  answers or permission relayed by another session.
+
 **Not tested:** macOS; whether user-scope skills show up inside an already-running cloud session
-(project-scope files did, in an earlier session); the agent actually following the interview and tailoring
-steps of the prompt. Only the scripts behind them were exercised, so expect to adjust the wording of
-steps 4 and 7 after the first real run.
+(project-scope files did, in an earlier session); a full run in a cloud session past step 5, so the real
+install there, the rest of the interview, tailoring, saving a profile and replaying it. Only the scripts
+behind them were exercised, so expect to adjust the wording of steps 4 and 7 after the first complete run.
 
 ## Known gaps
 
