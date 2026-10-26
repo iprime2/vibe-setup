@@ -128,9 +128,12 @@ and prints a `WARN` line for each one. At the current pins there are none (check
 ## Updating a pin
 
 Review the upstream diff first. Then change the SHA (and, for Ponytail, the sha256 of `SKILL.md`) in
-`sources.lock`, run `--dry-run`, and open a pull request. At the time of writing, upstream Ponytail has a
-newer `SKILL.md` (commit `df9e8994`, 2026-10-16) that has not been reviewed, and Agent Skills has moved on
-from the pinned commit.
+`sources.lock`, run `--dry-run`, and open a pull request.
+
+Ponytail was reviewed against upstream `main` (`09c434ab`) on 2026-10-26. Since the pin, only commit `df9e8994`
+(2026-10-16) changes `skills/ponytail/SKILL.md`: it adds `off` to the frontmatter `argument-hint`. Ponytail's
+plugin hooks handle `off`, and this repo does not install them, so the pin stays. Agent Skills has moved on
+from the pinned commit; that diff has not been reviewed.
 
 ## Uninstall
 
