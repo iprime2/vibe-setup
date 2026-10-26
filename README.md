@@ -80,7 +80,8 @@ interview you about your product, propose tweaks, and apply only the ones you ap
    was saved.
 
 `bootstrap.sh` validates a profile before it installs anything and refuses one that writes outside
-`skills/`, `commands/` and `agents/` (no settings or hooks), contains symlinks, or lists unsafe removals.
+`skills/`, `commands/` and `agents/` (no settings or hooks), contains symlinks, or lists unsafe removals
+(anything outside those folders, one of the folders as a whole, or graphify's skill).
 A profile cannot change `settings.json`.
 
 Keep confidential details (including employer-specific ones) out of `PROJECT.md` and the overrides: this repo

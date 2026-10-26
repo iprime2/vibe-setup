@@ -55,7 +55,13 @@ if [ -n "$PROFILE" ]; then
   if [ -f "$pdir/remove.txt" ]; then
     while IFS= read -r rel || [ -n "$rel" ]; do
       case "$rel" in ''|'#'*) continue ;; esac
-      case "$rel" in /*|*..*) die "unsafe path in remove.txt: $rel" ;; skills/*|commands/*|agents/*) ;; *) die "remove.txt may only name skills/, commands/ or agents/ paths: $rel" ;; esac
+      # One named item only: a bare "skills/" (or "skills//", "skills/.") would delete the whole folder.
+      case "$rel" in
+        /*|*..*|*//*|*/|*/.|*/./*) die "unsafe path in remove.txt: $rel" ;;
+        skills/graphify|skills/graphify/*) die "remove.txt must not name graphify's skill: $rel" ;;
+        skills/?*|commands/?*|agents/?*) ;;
+        *) die "remove.txt may only name skills/, commands/ or agents/ paths: $rel" ;;
+      esac
     done < "$pdir/remove.txt"
   fi
 fi
