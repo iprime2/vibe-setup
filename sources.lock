@@ -21,3 +21,26 @@ AGENT_SKILLS_SHA="1401c8b8030e023baeebb31781a6653fe8e93026"
 # web-performance-auditor agent) and performance-optimization are included so those do not dangle.
 AGENT_SKILLS_LIST="interview-me spec-driven-development planning-and-task-breakdown incremental-implementation test-driven-development debugging-and-error-recovery code-review-and-quality security-and-hardening frontend-ui-engineering git-workflow-and-versioning shipping-and-launch doubt-driven-development code-simplification browser-testing-with-devtools performance-optimization"
 AGENT_COMMANDS="spec plan build test review code-simplify ship"
+
+# The two sources below are fetched only when a --pack needs them (see packs.conf).
+# Only the skill folders listed are copied, never a whole plugin, and the upstream LICENSE is
+# copied into each one. Paths are <plugin>/<skill>, under plugins/ at the pinned commit.
+
+# Trail of Bits skills: github.com/trailofbits/skills (CC-BY-SA-4.0). Commit of 2026-10-23.
+# Audited line by line: every file in the listed skill folders was read in full on 2026-10-26.
+# Not listed, because they need plugin-only features or break a standing rule: rust-review and
+# c-review (CLAUDE_PLUGIN_ROOT, plugin scripts), insecure-defaults (a plugin command, not a skill),
+# zeroize-audit (Serena MCP server, plugin agents), dimensional-analysis (plugin agents),
+# constant-time-analysis (analyzer lives outside the skill folder), supply-chain-risk-auditor
+# (reads the gh CLI token). From building-secure-contracts only the general and EVM skills are listed.
+TOB_REPO="trailofbits/skills"
+TOB_SHA="196a9073ab10d35bacf111f945e02c00b2c6883a"
+TOB_SKILL_PATHS="entry-point-analyzer/entry-point-analyzer modern-cpp/modern-cpp property-based-testing/property-based-testing building-secure-contracts/secure-workflow-guide building-secure-contracts/guidelines-advisor building-secure-contracts/token-integration-analyzer building-secure-contracts/code-maturity-assessor building-secure-contracts/audit-prep-assistant"
+
+# wshobson/agents: github.com/wshobson/agents (MIT). Commit of 2026-10-17.
+# Audited line by line: every file in the listed skill folders was read in full on 2026-10-26.
+# The rest of the five plugins evaluated was rejected (overlap, all-tools agents, outdated or wrong
+# commands); see README.md.
+WSHOBSON_REPO="wshobson/agents"
+WSHOBSON_SHA="0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+WSHOBSON_SKILL_PATHS="observability-monitoring/prometheus-configuration incident-response/postmortem-writing"

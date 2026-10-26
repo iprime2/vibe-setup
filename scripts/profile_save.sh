@@ -3,6 +3,7 @@
 #   profiles/NAME/overrides/   changed or new skills, commands and agents (same layout as .claude/)
 #   profiles/NAME/remove.txt   upstream items deleted for this product
 #   profiles/NAME/profile.lock pins in effect now (bootstrap.sh warns when sources.lock moves on)
+#                              and the packs installed (bootstrap.sh installs them with the profile)
 #   profiles/NAME/CHANGES.diff unified diff against upstream, for review only (never applied)
 # Compares .claude/ with the pristine snapshot that `bootstrap.sh --scope project` took.
 # Writes only under profiles/NAME/. PROJECT.md is written by hand and left alone.
@@ -42,6 +43,13 @@ while IFS= read -r -d '' f; do
 done < <(find "$CLAUDE_DIR" -mindepth 2 -type f \
   \( -path "$CLAUDE_DIR/skills/*" -o -path "$CLAUDE_DIR/commands/*" -o -path "$CLAUDE_DIR/agents/*" \) -print0)
 
+# A tailored copy of a third-party skill keeps its upstream LICENSE (attribution, same licence).
+for d in "$STAGE"/overrides/skills/*/; do
+  [ -d "$d" ] || continue
+  n="$(basename "$d")"
+  if [ -f "$CLAUDE_DIR/skills/$n/LICENSE" ] && [ ! -f "$d/LICENSE" ]; then cp "$CLAUDE_DIR/skills/$n/LICENSE" "$d/LICENSE"; fi
+done
+
 # Upstream files that are gone: a whole skill folder is recorded once, anything else per file.
 while IFS= read -r -d '' s; do
   rel="${s#"$SNAP"/}"
@@ -60,6 +68,10 @@ if [ -z "$(ls -A "$STAGE/overrides")" ] && [ ! -s "$STAGE/remove.txt" ]; then
   exit 0
 fi
 
+PACKS_USED=""
+if [ -f "$CLAUDE_DIR/.vibe-setup/packs" ]; then PACKS_USED="$(cat "$CLAUDE_DIR/.vibe-setup/packs")"; fi
+[[ "$PACKS_USED" =~ ^[a-z0-9\ ]*$ ]] || die "unexpected content in $CLAUDE_DIR/.vibe-setup/packs"
+
 OUT="$HERE/profiles/$NAME"
 mkdir -p "$OUT"
 rm -rf "$OUT/overrides" "$OUT/remove.txt" "$OUT/CHANGES.diff" "$OUT/profile.lock"
@@ -70,6 +82,9 @@ cat > "$OUT/profile.lock" <<EOF
 # Pins in effect when this profile was captured. bootstrap.sh warns if sources.lock has moved on.
 PROFILE_PONYTAIL_SHA="$PONYTAIL_SHA"
 PROFILE_AGENT_SKILLS_SHA="$AGENT_SKILLS_SHA"
+PROFILE_TOB_SHA="$TOB_SHA"
+PROFILE_WSHOBSON_SHA="$WSHOBSON_SHA"
+PROFILE_PACKS="$PACKS_USED"
 EOF
 
 echo "Saved profile '$NAME' to $OUT"
