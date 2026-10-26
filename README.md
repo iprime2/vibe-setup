@@ -162,7 +162,7 @@ is private, but the files are plain text in git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 147 checks
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 166 checks
 when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
 - Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
@@ -179,7 +179,9 @@ when this was written). They never touch the real `~/.claude` or uv tools. The c
 - Packs: `--pack` without a value and unknown pack names refused before anything is installed; dry runs at both
   scopes change nothing, and without `--pack` nothing from the packs is planned; `--pack all` installs every
   item at user and project scope, each third-party copy with its `LICENSE`, no `CLAUDE_PLUGIN_ROOT` anywhere,
-  role agents limited to Read, Grep and Glob, valid frontmatter and unique names; a re-run is identical; an
+  role agents limited to Read, Grep and Glob, valid frontmatter and unique names; a re-run is identical; a
+  default install has exactly the base skills from `sources.lock` and no pack item, and each pack installed on
+  its own adds exactly its items to that and removes nothing; an
   unfetchable Trail of Bits pin and a pinned skill that needs plugin-only features both stop with nothing
   installed; the snapshot covers the packs and `profile_save.sh` finds nothing to save; a profile saved with
   packs records them, keeps the `LICENSE` in a tailored third-party skill, and replays them without `--pack`;

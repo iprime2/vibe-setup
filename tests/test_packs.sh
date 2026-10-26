@@ -121,6 +121,37 @@ n=$(count "$C/skills"); want=$((NSKILLS + 1 + NPSKILLS))
 if [ "$n" -eq "$want" ]; then ok "still $want skills"; else bad "skills after re-run: $n, wanted $want"; fi
 check "no leftover .bak files" bash -c "[ -z \"\$(find '$C' -name '*.bak')\" ]"
 
+echo "== without --pack nothing from the packs is installed; each pack alone adds exactly its items"
+# names DIR: every installed skill folder, command and agent, as skills/X, commands/X.md, agents/X.md
+names() { (cd "$1" && { ls -d skills/*/ 2>/dev/null | sed 's#/$##'; ls commands/*.md agents/*.md 2>/dev/null; }) | LC_ALL=C sort; }
+expected_items() {
+  for it in $(packvar "PACK_$1"); do
+    case "$it" in agent:*) echo "agents/${it#*:}.md" ;; command:*) echo "commands/${it#*:}.md" ;; *) echo "skills/${it#*:}" ;; esac
+  done | LC_ALL=C sort
+}
+HB="$W/home-base"; mkdir -p "$HB" "$W/c-base"; cd "$W/c-base" || exit 2
+capture env HOME="$HB" bash "$REPO/bootstrap.sh"
+expect_rc "default install (no --pack) exits 0" 0
+names "$HB/.claude" > "$W/base.names"
+want="$(for s in ponytail graphify $(lockvar "$REPO" AGENT_SKILLS_LIST); do echo "skills/$s"; done | LC_ALL=C sort)"
+if [ "$(grep '^skills/' "$W/base.names")" = "$want" ]; then ok "default install: exactly the base skills from sources.lock"
+else bad "default install skills differ from sources.lock"; fi
+leak=""; for p in $ALL_PACKS; do for f in $(expected_items "$p"); do grep -qxF "$f" "$W/base.names" && leak="$leak $f"; done; done
+if [ -z "$leak" ]; then ok "default install: no pack item"; else bad "default install contains pack items:$leak"; fi
+for p in $ALL_PACKS; do
+  Hp="$W/home-pack-$p"; mkdir -p "$Hp" "$W/c-pack-$p"; cd "$W/c-pack-$p" || exit 2
+  capture env HOME="$Hp" bash "$REPO/bootstrap.sh" --pack "$p"
+  expect_rc "--pack $p exits 0" 0
+  names "$Hp/.claude" > "$W/pack-$p.names"
+  added="$(LC_ALL=C comm -13 "$W/base.names" "$W/pack-$p.names")"
+  removed="$(LC_ALL=C comm -23 "$W/base.names" "$W/pack-$p.names")"
+  if [ "$added" = "$(expected_items "$p")" ] && [ -z "$removed" ]; then
+    ok "--pack $p adds exactly its $(expected_items "$p" | wc -l | tr -d ' ') items and removes nothing"
+  else
+    bad "--pack $p: added [$(echo $added)], removed [$(echo $removed)], wanted [$(echo $(expected_items "$p"))]"
+  fi
+done
+
 echo "== a Trail of Bits pin that cannot be fetched stops with nothing installed"
 copy_repo "$W/tob-bad"
 sed -i.bak 's/^TOB_SHA=.*/TOB_SHA="0123456789abcdef0123456789abcdef01234567"/' "$W/tob-bad/sources.lock"
