@@ -13,7 +13,8 @@ Words you can add to the last line of the prompt:
 - `project scope`: install untailored into `./.claude` instead of `~/.claude`.
 - `project init`: also wire graphify into the current git repo and build a code-only graph.
 - `packs <list>`: also install optional packs, comma-separated (`roles`, `quant`, `systems`, `web3`,
-  `fintech`, `security`, `mobile`, `ops`, or `all`); see "Packs" in the README.
+  `fintech`, `security`, `mobile`, `ops`, `memory`, or `all`); see "Packs" in the README. `memory` adds
+  `/learn`, `/handoff` and `/pickup` for lessons and handoffs kept in the project repo.
 
 Permission prompts: in a cloud session on the auto permission mode, the harness may refuse to run scripts from
 the cloned repo ("Code from External"). In two fresh sessions on 2026-10-26 the agent stopped at step 5 (the
