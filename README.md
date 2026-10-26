@@ -30,8 +30,9 @@ Another Claude session cannot answer for you: agents treat relayed messages as d
 | Ponytail | github.com/DietrichGebert/ponytail | commit + sha256 of `SKILL.md` |
 | Agent Skills | github.com/addyosmani/agent-skills | commit |
 
-From Agent Skills it copies 12 skills, 7 slash commands (with the `agent-skills:` prefix stripped, because
-they are installed as plain files, not as a plugin) and 4 agents. The exact lists are in `sources.lock`.
+From Agent Skills it copies the skills, slash commands (with the `agent-skills:` prefix stripped, because they
+are installed as plain files, not as a plugin) and agents named in `sources.lock`: 15 skills, 7 commands and
+4 agents at the current pins.
 `bootstrap.sh` stops if the Ponytail hash or the Agent Skills commit is not the pinned one.
 
 ## Files
@@ -111,12 +112,12 @@ Fresh cloud sessions (2026-10-26; two sessions started from this prompt, one wit
 install there, the rest of the interview, tailoring, saving a profile and replaying it. Only the scripts
 behind them were exercised, so expect to adjust the wording of steps 4 and 7 after the first complete run.
 
-## Known gaps
+## Dangling references
 
-`bootstrap.sh` warns that installed files reference three skills that are not installed:
-`code-simplification` (used by `/code-simplify`), `browser-testing-with-devtools` (`/test`,
-`web-performance-auditor`) and `performance-optimization` (an agent). They exist upstream.
-To add one, put its name in `AGENT_SKILLS_LIST` in `sources.lock`.
+`bootstrap.sh` checks whether an installed command or agent mentions an upstream skill that is not installed,
+and prints a `WARN` line for each one. At the current pins there are none (checked 2026-10-26). If you shorten
+`AGENT_SKILLS_LIST`, or a pin moves to a commit that references more skills, add the named skill to
+`AGENT_SKILLS_LIST` in `sources.lock`; it has to exist upstream at the pinned commit.
 
 ## Updating a pin
 
