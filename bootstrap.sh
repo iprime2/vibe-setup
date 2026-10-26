@@ -2,23 +2,28 @@
 # Install the vibe-coding toolkit (Graphify, Ponytail, Agent Skills) from the pinned,
 # allow-listed sources in sources.lock. Idempotent. Never commits, never reads secrets.
 #
-#   bash bootstrap.sh [--scope user|project] [--with-rules] [--dry-run]
+#   bash bootstrap.sh [--scope user|project] [--profile NAME] [--with-rules] [--dry-run]
 #
-# --scope user     (default) install into ~/.claude; keeps project repos clean
-# --scope project  install into ./.claude of the current directory
-# --with-rules     also append rules/CLAUDE.md to <scope>/.claude/CLAUDE.md (between markers)
-# --dry-run        print every command, change nothing
+# --scope user      (default) install into ~/.claude; keeps project repos clean
+# --scope project   install into ./.claude of the current directory; also keeps a pristine
+#                   snapshot in .claude/.vibe-setup/ so tailoring can be captured (profile_save.sh)
+# --profile NAME    after installing, apply profiles/NAME (tailored skills for one product).
+#                   Needs --scope project: user-level copies of the same skills could shadow it.
+# --with-rules      also append rules/CLAUDE.md to <scope>/.claude/CLAUDE.md (between markers)
+# --dry-run         print every command, change nothing
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=sources.lock
 . "$HERE/sources.lock"
 
-SCOPE=user DRY=0 RULES=0
-usage() { echo "usage: bootstrap.sh [--scope user|project] [--with-rules] [--dry-run]"; }
+SCOPE=user DRY=0 RULES=0 PROFILE=""
+usage() { echo "usage: bootstrap.sh [--scope user|project] [--profile NAME] [--with-rules] [--dry-run]"; }
+need_value() { [ "$1" -ge 2 ] || { usage >&2; exit 2; }; }
 while [ $# -gt 0 ]; do
   case "$1" in
-    --scope) SCOPE="${2:-}"; shift 2 || true ;;
+    --scope) need_value $#; SCOPE="$2"; shift 2 ;;
+    --profile) need_value $#; PROFILE="$2"; shift 2 ;;
     --with-rules) RULES=1; shift ;;
     --dry-run) DRY=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -35,8 +40,28 @@ run() { echo "+ $*"; if [ "$DRY" != 1 ]; then "$@"; fi; }
 die() { echo "STOP: $*" >&2; exit 1; }
 sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
 
+# Validate the profile before anything is installed, so a bad profile cannot leave a half-install.
+if [ -n "$PROFILE" ]; then
+  [[ "$PROFILE" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "invalid profile name: $PROFILE"
+  [ "$SCOPE" = project ] || die "--profile needs --scope project"
+  pdir="$HERE/profiles/$PROFILE"
+  [ -f "$pdir/profile.lock" ] || die "profile '$PROFILE' not found (expected $pdir/profile.lock)"
+  if [ -d "$pdir/overrides" ]; then
+    while IFS= read -r e; do
+      case "$(basename "$e")" in skills|commands|agents) ;; *) die "profile overrides may only contain skills/, commands/ and agents/ (found $(basename "$e"))" ;; esac
+    done < <(find "$pdir/overrides" -mindepth 1 -maxdepth 1)
+    [ -z "$(find "$pdir/overrides" -type l)" ] || die "profile overrides must not contain symlinks"
+  fi
+  if [ -f "$pdir/remove.txt" ]; then
+    while IFS= read -r rel || [ -n "$rel" ]; do
+      case "$rel" in ''|'#'*) continue ;; esac
+      case "$rel" in /*|*..*) die "unsafe path in remove.txt: $rel" ;; skills/*|commands/*|agents/*) ;; *) die "remove.txt may only name skills/, commands/ or agents/ paths: $rel" ;; esac
+    done < "$pdir/remove.txt"
+  fi
+fi
+
 echo "== detect"
-echo "os: $(uname -srm) | user: $(id -un) | cloud: ${CLAUDE_CODE_REMOTE:-no} | scope: $SCOPE -> $CLAUDE_DIR | cwd: $PWD"
+echo "os: $(uname -srm) | user: $(id -un) | cloud: ${CLAUDE_CODE_REMOTE:-no} | scope: $SCOPE -> $CLAUDE_DIR | profile: ${PROFILE:-none} | cwd: $PWD"
 for t in git curl python3 uv node claude; do
   printf '%s: ' "$t"
   if command -v "$t" >/dev/null 2>&1; then "$t" --version 2>&1 | head -1; else echo "missing"; fi
@@ -88,12 +113,42 @@ for c in $AGENT_COMMANDS; do
 done
 run cp "$src"/agents/*.md "$CLAUDE_DIR/agents/"
 
+# Project scope: remember exactly what upstream looked like, so tailoring can be diffed and captured.
+if [ "$SCOPE" = project ]; then
+  echo "== pristine snapshot"
+  snap="$CLAUDE_DIR/.vibe-setup/pristine"
+  run rm -rf "${snap:?}"
+  run mkdir -p "$snap/skills" "$snap/commands" "$snap/agents"
+  for s in ponytail $AGENT_SKILLS_LIST; do run cp -R "$CLAUDE_DIR/skills/$s" "$snap/skills/$s"; done
+  for c in $AGENT_COMMANDS; do run cp "$CLAUDE_DIR/commands/$c.md" "$snap/commands/$c.md"; done
+  for a in "$src"/agents/*.md; do run cp "$CLAUDE_DIR/agents/$(basename "$a")" "$snap/agents/"; done
+fi
+
+if [ -n "$PROFILE" ]; then
+  echo "== profile $PROFILE"
+  # shellcheck disable=SC1091
+  . "$pdir/profile.lock"
+  if [ "${PROFILE_AGENT_SKILLS_SHA:-}" != "$AGENT_SKILLS_SHA" ] || [ "${PROFILE_PONYTAIL_SHA:-}" != "$PONYTAIL_SHA" ]; then
+    echo "WARN: profile '$PROFILE' was tailored against different pins than sources.lock now has; re-review its CHANGES.diff before relying on it"
+  fi
+  if [ -d "$pdir/overrides" ]; then run cp -R "$pdir/overrides/." "$CLAUDE_DIR/"; fi
+  if [ -f "$pdir/remove.txt" ]; then
+    while IFS= read -r rel || [ -n "$rel" ]; do
+      case "$rel" in ''|'#'*) continue ;; esac
+      run rm -rf "${CLAUDE_DIR:?}/$rel"
+    done < "$pdir/remove.txt"
+  fi
+  if [ -f "$pdir/PROJECT.md" ]; then
+    run python3 -I "$HERE/scripts/append_block.py" "$CLAUDE_DIR/CLAUDE.md" "$pdir/PROJECT.md" "profile:$PROFILE"
+  fi
+fi
+
 if [ "$DRY" != 1 ]; then
   for d in "$src"/skills/*/; do
     n="$(basename "$d")"
     [ -d "$CLAUDE_DIR/skills/$n" ] && continue
     if grep -qw -- "$n" "$CLAUDE_DIR"/commands/*.md "$CLAUDE_DIR"/agents/*.md 2>/dev/null; then
-      echo "WARN: an installed command/agent references skill '$n', which is not installed (not in AGENT_SKILLS_LIST)"
+      echo "WARN: an installed command/agent references skill '$n', which is not installed (not in AGENT_SKILLS_LIST, or removed by the profile)"
     fi
   done
 fi
