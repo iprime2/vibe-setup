@@ -17,7 +17,7 @@ AGENT_SKILLS_REPO="addyosmani/agent-skills"
 AGENT_SKILLS_SHA="1401c8b8030e023baeebb31781a6653fe8e93026"
 
 # What to copy from agent-skills (skills/<name>, .claude/commands/<name>.md, agents/*.md).
-# Not included on purpose; /code-simplify needs code-simplification, and /test plus the
-# web-performance-auditor agent need browser-testing-with-devtools. bootstrap.sh warns about these.
-AGENT_SKILLS_LIST="interview-me spec-driven-development planning-and-task-breakdown incremental-implementation test-driven-development debugging-and-error-recovery code-review-and-quality security-and-hardening frontend-ui-engineering git-workflow-and-versioning shipping-and-launch doubt-driven-development"
+# code-simplification (/code-simplify), browser-testing-with-devtools (/test and the
+# web-performance-auditor agent) and performance-optimization are included so those do not dangle.
+AGENT_SKILLS_LIST="interview-me spec-driven-development planning-and-task-breakdown incremental-implementation test-driven-development debugging-and-error-recovery code-review-and-quality security-and-hardening frontend-ui-engineering git-workflow-and-versioning shipping-and-launch doubt-driven-development code-simplification browser-testing-with-devtools performance-optimization"
 AGENT_COMMANDS="spec plan build test review code-simplify ship"
