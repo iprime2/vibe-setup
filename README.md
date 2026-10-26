@@ -47,6 +47,7 @@ they are installed as plain files, not as a plugin) and 4 agents. The exact list
 | `profiles/<name>/` | Saved tailoring for one product (created by `profile_save.sh`) |
 | `rules/CLAUDE.md` | My standing rules (draft); installed only with `--with-rules` |
 | `docs/context-mode.md` | Evaluation notes on `context-mode`; not installed |
+| `tests/` | Regression tests: `bash tests/run.sh` (needs network; uses a throwaway HOME) |
 
 ## Scopes
 
@@ -86,6 +87,9 @@ Keep confidential details (including employer-specific ones) out of `PROJECT.md`
 is private, but the files are plain text in git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
+
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 81 checks
+when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
 - Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
 - `--with-rules` appends after graphify's existing `CLAUDE.md` section and replaces its own block on re-run.
