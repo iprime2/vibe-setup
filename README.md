@@ -6,6 +6,12 @@ It does not copy anyone else's files into this repo: third-party skills are pinn
 fetched at install time. The one exception is a saved profile, whose tailored copies of upstream files sit in
 `profiles/` with their upstream licence (see "Licences").
 
+**Open source.** vibe-setup is open source under the [MIT licence](LICENSE): use, copy, change and share it,
+keeping the copyright notice. That covers this repo's own files: the installer, scripts and tests, and the agents,
+commands and skills written here. Third-party files keep their own licences: the sources in `sources.lock` are
+fetched at install time under theirs, and the tailored copies in `profiles/` carry their upstream licence and a
+`NOTICE.md`.
+
 ## Quick start
 
 - **Any session:** paste the prompt from [`SETUP_PROMPT.md`](SETUP_PROMPT.md) into a new Claude Code session.
@@ -159,6 +165,7 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 
 | File | Purpose |
 |---|---|
+| `LICENSE` | MIT licence for this repo's own files |
 | `SETUP_PROMPT.md` | The prompt to paste into a new session |
 | `bootstrap.sh` | Installer: `--scope user\|project`, `--pack NAME[,NAME]`, `--profile NAME`, `--with-rules`, `--dry-run` |
 | `project-init.sh` | Per-project graphify wiring and a code-only graph build |
@@ -213,7 +220,7 @@ symlinks, or lists unsafe removals (anything outside those folders, or one of th
 A profile cannot change `settings.json`.
 
 Keep confidential details (including employer-specific ones) out of `PROJECT.md` and the overrides: this repo
-is private, but the files are plain text in git history.
+is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
@@ -258,8 +265,8 @@ when this was written). They never touch the real `~/.claude` or uv tools. The c
 Fresh cloud sessions (2026-10-26; two sessions started from this prompt, one with nothing attached and
 `skip tailoring`, one on a public project repo):
 
-- Steps 1 to 3 ran as written: detect, `add_repo` for this private repo, shallow clone at the merge commit,
-  and reading the scripts before running them.
+- Steps 1 to 3 ran as written: detect, `add_repo` for this repo (private at the time), shallow clone at the
+  merge commit, and reading the scripts before running them.
 - The `skip tailoring` session stopped at step 5, blocked by the permission check (see Quick start).
 - The tailoring session started the interview correctly, asked question (a) and waited. It did not accept
   answers or permission relayed by another session.
