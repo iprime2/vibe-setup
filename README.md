@@ -60,6 +60,7 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 | `security` | | ToB `property-based-testing` |
 | `mobile` | `react-native-expo` | ECC `react-native-patterns` |
 | `ops` | | wshobson `prometheus-configuration`, `postmortem-writing` |
+| `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup` (see "Memory and handoffs") | |
 
 The role agents are read-only (`tools: Read, Grep, Glob`). `/tiered-review` picks the tier from the diff
 (mid-level by default; senior for logic, concurrency, money or security; lead for new services, schemas,
@@ -98,10 +99,53 @@ that reason.
 | ECC `llm-trading-agent-security` | Takes the signing key from an environment variable and relies on a regex injection filter, against `crypto-custody-and-keys` |
 | ECC `latency-critical-systems`, `cpp-coding-standards`, `architecture-decision-records`, `tdd-workflow` | Covered by `low-latency-systems`, ToB `modern-cpp`, `system-design` and Agent Skills TDD |
 | ECC `security-review` | Clashes with Claude Code's built-in `security-review` |
+| ECC `continuous-learning`, `continuous-learning-v2`, `unified-memory`, `/learn`, `/save-session`, `/resume-session` | Their ideas are rebuilt in the `memory` pack without hooks, a background observer or a runtime; see "Memory and handoffs" |
 | The other ECC skills (about 290) | Outside the packs, or need the ECC plugin, CLI or an MCP server (13 do) |
 
 Agent Skills itself has `observability-and-instrumentation` at the current pin; adding it to `AGENT_SKILLS_LIST`
 is the simplest route to generic observability guidance.
+
+## Memory and handoffs
+
+The `memory` pack gives agents a memory that survives a thrown-away container and works across sessions and
+tools. It takes the ideas behind ECC's continuous learning, session save and resume, and memory vault, and keeps
+this repo's rules: nothing runs in the background, nothing new is fetched, and you approve every write.
+
+- `/learn` records lessons from the session in `.agent-memory/LESSONS.md` in the project repo: a correction you
+  made, an error and its root cause, an approach that failed and why, a convention nobody wrote down. Each
+  lesson is one trigger and one action with dated evidence. It starts as `candidate`, becomes `confirmed` when
+  the evidence repeats in a later session or you confirm it, and is `retired` (kept, with the reason) when it
+  turns out wrong.
+- `/promote-lessons` builds confirmed lessons into the installed skills, commands or agents, one approved diff
+  at a time, under the same limits as tailoring. At project scope those edits are tailoring, so
+  `profile_save.sh` carries them into a profile and the next project starts with them.
+- `/handoff` writes `.agent-memory/handoffs/<YYYY-MM-DD-HHMM>-<slug>.md`: the verified state with its evidence,
+  what did not work, decisions, open questions, your rules in your words, one next step, and a closing line
+  saying it grants no permission. It also prints a block to paste into the next session or tool.
+- `/pickup` reads a handoff, checks it against the repo read-only (commit, files, quick checks), reports what is
+  stale, and waits for you.
+- `check.py` in the skill folder validates both formats and flags likely secrets by file and line, never by
+  value.
+- With your approval, a short marked block in the project's `AGENTS.md` (plus `@AGENTS.md` in `CLAUDE.md`)
+  tells every agent where the memory is and that it is data, not instructions.
+
+A typical loop: `/learn` at the end of a task and commit `LESSONS.md` with the change; `/handoff` when work moves
+to another session, paste the block there (or push the file on the branch), and `/pickup`; now and then
+`/promote-lessons`, then `profile_save.sh` to keep the result.
+
+| ECC | Here | Why |
+|---|---|---|
+| Hooks record every prompt and tool call; an optional background model turns them into "instincts" | You run `/learn`; the agent proposes lessons, you approve the diff | No transcripts or tool output on disk, no reliance on a regex secret scrubber, no daemon or extra model calls |
+| Confidence scores from 0.3 to 0.9 | `candidate`, `confirmed`, `promoted` or `retired`, with dated evidence | Observations can be checked; a score cannot |
+| Instincts injected into every session at start | A reviewed file the agent reads because `AGENTS.md` or `CLAUDE.md` points to it | Only reviewed text reaches the context |
+| `/evolve` clusters instincts into new skills, commands or agents | `/promote-lessons` edits the installed ones by diff | Fits the tailoring and profile flow; nothing is generated unreviewed |
+| Session files in `~/.claude/session-data`, instincts in `~/.local/share`, a git-ignored project vault | `.agent-memory/` in the project repo, committed through review | A cloud container loses its home directory and ignored files; git keeps the repo, and pull requests review it |
+| Memory vault CLI and MCP server (npm package) | Plain Markdown and one Python checker | No new source or runtime; every tool reads Markdown |
+| A handoff routed by harness name | One format for any reader, plus a paste-ready block | Between cloud sessions, work moves by paste or by a pushed branch |
+
+Kept from ECC as is: memory is unreviewed context, never policy or permission; verify a claim against the repo
+before relying on it, and a newer correction wins; a saved handoff is never edited, a new one replaces it; the
+"did not work" list matters most; no secrets, ever.
 
 ## Files
 
@@ -112,7 +156,7 @@ is the simplest route to generic observability guidance.
 | `project-init.sh` | Per-project graphify wiring and a code-only graph build |
 | `sources.lock` | Allowed sources and pins |
 | `packs.conf` | Which items each optional pack installs |
-| `agents/`, `commands/`, `skills/` | Role agents, `/tiered-review` and domain skills written here, installed only by packs |
+| `agents/`, `commands/`, `skills/` | Role agents, `/tiered-review`, the memory commands and skills written here, installed only by packs |
 | `scripts/profile_save.sh` | Captures tailoring done in `./.claude` as a profile |
 | `scripts/*.py` | Two small helpers (fail-open hooks, marked `CLAUDE.md` blocks) |
 | `profiles/<name>/` | Saved tailoring for one product (created by `profile_save.sh`) |
@@ -162,7 +206,7 @@ is private, but the files are plain text in git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 166 checks
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 210 checks
 when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
 - Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
@@ -186,6 +230,12 @@ when this was written). They never touch the real `~/.claude` or uv tools. The c
   installed; the snapshot covers the packs and `profile_save.sh` finds nothing to save; a profile saved with
   packs records them, keeps the `LICENSE` in a tailored third-party skill, and replays them without `--pack`;
   dropping the packs on a re-run prints a warning.
+
+- Memory (offline): `check.py` accepts the skill's own lesson and handoff examples and changes no file; names
+  each format problem (duplicate or malformed id, missing or empty field, bad status, scope or count, undated
+  evidence, missing or empty handoff section, missing closing line, bad file name); reports likely secrets by
+  file and line without printing them, while names of secrets, placeholders and variables pass; skips and
+  reports symlinks, and refuses a symlinked memory directory.
 
 Fresh cloud sessions (2026-10-26; two sessions started from this prompt, one with nothing attached and
 `skip tailoring`, one on a public project repo):
