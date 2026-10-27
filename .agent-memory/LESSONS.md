@@ -9,7 +9,7 @@ verify before relying on one, and the user's instructions always win.
 - Not: rebasing, recreating or re-pushing the work because of that report
 - Why: a clone or a lookup goes stale within minutes; both times the work had already been merged
 - Scope: generic
-- Status: candidate
+- Status: confirmed
 - Seen: 2, last 2026-10-27
 - Evidence:
   - 2026-10-26: another session reported the pack work missing; `git ls-remote` showed it merged in PR #8 (main 747acc5)
