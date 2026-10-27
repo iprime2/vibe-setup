@@ -1,0 +1,14 @@
+# Project: crypto-exchange-np
+
+1. **Product:** a crypto exchange for Nepal, built ahead of legalisation. Spot and perpetual futures, with NPR withdrawals straight to Nepali bank accounts (no P2P). Users: Nepali retail and institutional traders, global institutions, global market makers.
+2. **Stack:** Rust for matching, risk and liquidation, the ledger, and REST/WebSocket/FIX gateways; C++ for the market-maker gateway; Next.js for web and admin; Expo for iOS and Android; shared TypeScript packages; Postgres, Redis, and Kafka or Redpanda; Solidity and other chain integrations for custody only.
+3. **Layout:** monorepo with `engine/`, `services/`, `mm-gateway/`, `web/`, `mobile/`, `packages/`, `contracts/`, `infra/`.
+4. **Stage and goal:** greenfield, before legalisation. "Good" means launch-ready, audited and regulator-presentable: spot and perp on test funds, NPR deposits and withdrawals end to end against a simulated bank, institutions and market makers connected, clean security and reconciliation reports.
+5. **Environments:** local; dev (deploys automatically from `main`); public testnet (test funds, same API as prod, blockchain testnets, simulated bank); prod.
+6. **Tests:** every change has tests; invariant checks and deterministic replay for the ledger and matching engine; fuzzed gateways and parsers.
+7. **Security and compliance:** no secrets in code; `cargo deny` and `npm audit`; a threat model for custody and withdrawals; multi-person approval for large withdrawals; external and smart-contract audits before launch. KYC, AML and sanctions hooks; audit logs that cannot be edited; minimal personal data. Nepal-specific rules to be added later.
+8. **Performance targets:** matching engine p99 under 1 ms, API order round trip p99 under 20 ms in-region, market data under 50 ms. Trading available 99.9%. Zero ledger mismatches: reconcile daily and pause withdrawals automatically on a mismatch.
+9. **Workflow:** a solo developer working with AI agents (Claude Code, and Grok in Cursor for some tasks). Sprints on a board (Linear suggested). `feat/<ticket>-name` branches off `main`, Conventional Commits, small squash-merged PRs.
+10. **Merge gate:** CI green (unit, integration, build and security jobs), then stage 1 review by every module owner the PR touches (senior-engineer, matching, ledger, risk and liquidation, custody and blockchain, quant, NPR payments, compliance), then a stage 2 lead-engineer review across the whole codebase, then the user approves, or Claude merges with the user's permission.
+11. **Deploys:** dev on every merge to `main`, testnet from a release tag, prod from the same tag after manual approval, with a rollback plan.
+12. **What to avoid:** generic skills that assume the wrong stack or tools and do not think from this project's perspective.

@@ -1,0 +1,7 @@
+# Pins in effect when this profile was captured. bootstrap.sh warns if sources.lock has moved on.
+PROFILE_PONYTAIL_SHA="2a1fe842d078cf66ec7f3e6096a8ca4279c2cad7"
+PROFILE_AGENT_SKILLS_SHA="1401c8b8030e023baeebb31781a6653fe8e93026"
+PROFILE_TOB_SHA="196a9073ab10d35bacf111f945e02c00b2c6883a"
+PROFILE_WSHOBSON_SHA="0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+PROFILE_ECC_SHA="25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b"
+PROFILE_PACKS="roles web3 fintech security systems quant mobile ops"
