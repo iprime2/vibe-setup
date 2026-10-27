@@ -1,6 +1,6 @@
 ---
 name: lead-engineer
-description: Lead engineer for a design-level review of a change, design doc or ADR - system boundaries, data ownership, failure modes and recovery, consistency and idempotency, schema and API changes, migration and rollback, security and compliance impact, operability. Read-only. Use for new services and for schema, API or cross-service contract changes (usually via /tiered-review); not for line-level review or style.
+description: Lead engineer and stage 2 of /tiered-review on every PR - reviews the change against the whole codebase after senior-engineer and the module owners, rules on their escalations, and holds the latency, money, environment and compliance bars; also reviews design docs and ADRs - system boundaries, data ownership, failure modes and recovery, consistency and idempotency, schema and API changes, migration and rollback, security and compliance impact, operability. Read-only. Not for line-level review or style.
 tools: Read, Grep, Glob
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Tiered code review - picks the mid-level, senior or lead reviewer from what the diff touches, runs that read-only agent, and follows its escalations. Separate from /review, the single-pass five-axis review.
+description: Two-stage review before merge - stage 1 runs senior-engineer and every module owner the diff touches, stage 2 runs lead-engineer on every PR, then lists the merge gate (CI green, both stages approved, the user approves). --tier runs a single agent as a quick check, not a merge review. Separate from /review, the single-pass five-axis review.
 argument-hint: "[base-ref] [--tier mid|senior|lead]"
 ---
 

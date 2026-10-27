@@ -47,6 +47,11 @@ if [ "$(sort "$A/remove.txt" | tr '\n' ' ')" = "commands/ship.md skills/shipping
 check "CHANGES.diff shows the tweak" grep -q 'ACME: every endpoint' "$A/CHANGES.diff"
 check "PROJECT.md is left alone" grep -q 'Trading operations' "$A/PROJECT.md"
 check "profile.lock records the pins" grep -q "PROFILE_AGENT_SKILLS_SHA=\"$(lockvar "$R" AGENT_SKILLS_SHA)\"" "$A/profile.lock"
+check "the tailored Agent Skills skill keeps its MIT LICENSE" grep -q "MIT License" "$A/overrides/skills/frontend-ui-engineering/LICENSE"
+check "the tailored Agent Skills agent gets LICENSES/agent-skills.txt" grep -q "MIT License" "$A/LICENSES/agent-skills.txt"
+rows="$(grep '^| `' "$A/NOTICE.md" 2>/dev/null | cut -d'`' -f2 | sort | tr '\n' ' ')"
+if [ "$rows" = "agents/security-auditor.md skills/frontend-ui-engineering " ]; then ok "NOTICE.md lists exactly the two tailored third-party items"; else bad "NOTICE.md rows: $rows"; fi
+check "NOTICE.md names the source and the licence text" grep -q 'agents/security-auditor.md` | Agent Skills (addyosmani/agent-skills) | MIT | LICENSES/agent-skills.txt' "$A/NOTICE.md"
 
 echo "== replay in a fresh project"
 mkdir -p "$W/p2"; cd "$W/p2" || exit 2
@@ -72,6 +77,7 @@ capture bash "$R/scripts/profile_save.sh" acme2
 expect_rc "re-save exits 0" 0
 check "round trip: overrides identical" diff -r "$R/profiles/acme/overrides" "$R/profiles/acme2/overrides"
 check "round trip: remove.txt identical" diff "$R/profiles/acme/remove.txt" "$R/profiles/acme2/remove.txt"
+check "round trip: NOTICE.md and LICENSES identical" bash -c "diff '$R/profiles/acme/NOTICE.md' '$R/profiles/acme2/NOTICE.md' && diff -r '$R/profiles/acme/LICENSES' '$R/profiles/acme2/LICENSES'"
 
 echo "== no differences means nothing is saved"
 mkdir -p "$W/p3"; cd "$W/p3" || exit 2
@@ -80,6 +86,20 @@ expect_rc "plain project install exits 0" 0
 capture bash "$R/scripts/profile_save.sh" nochange
 expect_out "reports there is nothing to save" "nothing to save"
 check "no profile directory was created" test ! -e "$R/profiles/nochange"
+mkdir -p "$W/p3/.claude/skills/own-skill"
+printf -- '---\nname: own-skill\ndescription: A new skill.\n---\nBody\n' > "$W/p3/.claude/skills/own-skill/SKILL.md"
+capture bash "$R/scripts/profile_save.sh" newonly
+expect_rc "a profile with only a new skill saves" 0
+check "it has no NOTICE.md and no LICENSES" bash -c "[ ! -e '$R/profiles/newonly/NOTICE.md' ] && [ ! -e '$R/profiles/newonly/LICENSES' ]"
+
+echo "== an install from before the licences were copied warns"
+find "$W/p3/.claude/skills" "$W/p3/.claude/.vibe-setup/pristine/skills" -name LICENSE -delete
+echo "<!-- tweak -->" >> "$W/p3/.claude/agents/security-auditor.md"
+echo "<!-- tweak -->" >> "$W/p3/.claude/skills/interview-me/SKILL.md"
+capture bash "$R/scripts/profile_save.sh" oldinstall
+expect_rc "the save still exits 0" 0
+expect_out "a warning names both items" "WARN: no upstream LICENSE in this install for: skills/interview-me agents/security-auditor.md"
+check "NOTICE.md marks the licence text as missing" grep -q 'agents/security-auditor.md` | Agent Skills (addyosmani/agent-skills) | MIT | missing' "$R/profiles/oldinstall/NOTICE.md"
 
 echo "== pin drift warns"
 sed -i.bak 's/^PROFILE_AGENT_SKILLS_SHA=.*/PROFILE_AGENT_SKILLS_SHA="deadbeef"/' "$R/profiles/acme/profile.lock"

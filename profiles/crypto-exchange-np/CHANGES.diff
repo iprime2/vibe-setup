@@ -220,6 +220,16 @@
  ## Research-to-Production Parity
  
  - Share the feature and signal code between research and production, or keep a parity test: replay the
+--- a/agents/mid-level-engineer.md
++++ b/agents/mid-level-engineer.md
+@@ -1,6 +1,6 @@
+ ---
+ name: mid-level-engineer
+-description: Mid-level engineer for an implementation-level review of a routine diff - follows existing conventions, tests exist and exercise the new code, naming, small refactors, docs updated. Flags risky areas (logic, concurrency, money, security, schemas, APIs) and escalates them to the senior or lead engineer instead of ruling on them. Read-only. The default tier of /tiered-review.
++description: Mid-level engineer for a quick implementation-level check of a routine diff before a PR is opened (/tiered-review --tier mid) - follows existing conventions, tests exist and exercise the new code, naming, small refactors, docs updated. Flags risky areas (logic, concurrency, money, security, schemas, APIs) for the senior engineer, the module owners or the lead instead of ruling on them. Read-only. Not a merge review.
+ tools: Read, Grep, Glob
+ ---
+ 
 --- a/agents/security-auditor.md
 +++ b/agents/security-auditor.md
 @@ -54,6 +54,14 @@
@@ -239,6 +249,14 @@
  | Severity | Criteria | Action |
 --- a/agents/lead-engineer.md
 +++ b/agents/lead-engineer.md
+@@ -1,6 +1,6 @@
+ ---
+ name: lead-engineer
+-description: Lead engineer for a design-level review of a change, design doc or ADR - system boundaries, data ownership, failure modes and recovery, consistency and idempotency, schema and API changes, migration and rollback, security and compliance impact, operability. Read-only. Use for new services and for schema, API or cross-service contract changes (usually via /tiered-review); not for line-level review or style.
++description: Lead engineer and stage 2 of /tiered-review on every PR - reviews the change against the whole codebase after senior-engineer and the module owners, rules on their escalations, and holds the latency, money, environment and compliance bars; also reviews design docs and ADRs - system boundaries, data ownership, failure modes and recovery, consistency and idempotency, schema and API changes, migration and rollback, security and compliance impact, operability. Read-only. Not for line-level review or style.
+ tools: Read, Grep, Glob
+ ---
+ 
 @@ -20,6 +20,22 @@
  3. Map the change: which services, stores, queues, schemas and public APIs it touches. Use Grep and Glob to
     find the callers and consumers of anything whose contract changes.
@@ -397,6 +415,14 @@
 +- Recommend, do not orchestrate: name other owners or the lead in your report instead of acting as them.
 --- a/agents/senior-engineer.md
 +++ b/agents/senior-engineer.md
+@@ -1,6 +1,6 @@
+ ---
+ name: senior-engineer
+-description: Senior engineer for a deep, line-by-line review of a diff - correctness, edge cases, concurrency and ordering, error handling, numeric precision, security, hot-path performance and test adequacy. Every finding has file:line, a severity (blocker, major or minor) and a concrete fix. Read-only. Use for logic, concurrency, money or security changes (usually via /tiered-review).
++description: Senior engineer and stage 1 of /tiered-review on every PR, next to the module owners - a deep, line-by-line review of a diff - correctness, edge cases, concurrency and ordering, error handling, numeric precision (no binary floating point on money paths), security, hot-path performance and test adequacy. Every finding has file:line, a severity (blocker, major or minor) and a concrete fix. Read-only.
+ tools: Read, Grep, Glob
+ ---
+ 
 @@ -18,6 +18,15 @@
     duplicate, out of order, concurrent.
  3. Go through every area below. An area that does not apply is left out of the report, not padded.
@@ -783,7 +809,10 @@
  7. **Summarize at the end:** tasks completed, tests added, commits made, and anything skipped, flagged, or left for the user.
 --- a/commands/tiered-review.md
 +++ b/commands/tiered-review.md
-@@ -3,8 +3,8 @@
+@@ -1,10 +1,10 @@
+ ---
+-description: Tiered code review - picks the mid-level, senior or lead reviewer from what the diff touches, runs that read-only agent, and follows its escalations. Separate from /review, the single-pass five-axis review.
++description: Two-stage review before merge - stage 1 runs senior-engineer and every module owner the diff touches, stage 2 runs lead-engineer on every PR, then lists the merge gate (CI green, both stages approved, the user approves). --tier runs a single agent as a quick check, not a merge review. Separate from /review, the single-pass five-axis review.
  argument-hint: "[base-ref] [--tier mid|senior|lead]"
  ---
  
