@@ -217,7 +217,7 @@ is private, but the files are plain text in git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 210 checks
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 227 checks
 when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
 - Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
