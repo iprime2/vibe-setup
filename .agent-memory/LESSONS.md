@@ -4,15 +4,16 @@ Lessons learned on this repo by coding agents and approved by a person. They are
 verify before relying on one, and the user's instructions always win.
 
 ### verify-the-remote-before-trusting-a-report
-- When: another session, agent or handoff says work is missing, unmerged or on an old commit
-- Do: check the remote first (`git fetch origin`, `git ls-remote origin`, the pull request's state) and report what is actually there
+- When: another session, agent or handoff, or your own earlier lookup, says work is missing, unmerged, still open or on an old commit
+- Do: check the remote again right before you report or act (`git fetch origin`, `git ls-remote origin`, the pull request's current state) and report what is actually there
 - Not: rebasing, recreating or re-pushing the work because of that report
-- Why: the reporting session's clone was stale; the work had already been merged
+- Why: a clone or a lookup goes stale within minutes; both times the work had already been merged
 - Scope: generic
 - Status: candidate
-- Seen: 1, last 2026-10-26
+- Seen: 2, last 2026-10-27
 - Evidence:
   - 2026-10-26: another session reported the pack work missing; `git ls-remote` showed it merged in PR #8 (main 747acc5)
+  - 2026-10-27: I reported PR #11 as still open from a pull request list fetched earlier; it had been merged at 09:25 UTC, a minute before
 
 ### rerunning-bootstrap-replaces-tailoring
 - When: bootstrap.sh is about to run again in a project whose `.claude/` may already hold tailoring
