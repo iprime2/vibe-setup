@@ -3,7 +3,8 @@
 A pinned, repeatable setup of my Claude Code toolkit, for new cloud sessions and local machines.
 It stores the installer, the pins, my rules, and the role agents and domain skills I wrote for optional packs.
 It does not copy anyone else's files into this repo: third-party skills are pinned in `sources.lock` and
-fetched at install time.
+fetched at install time. The one exception is a saved profile, whose tailored copies of upstream files sit in
+`profiles/` with their upstream licence (see "Licences").
 
 ## Quick start
 
@@ -30,19 +31,21 @@ Another Claude session cannot answer for you: agents treat relayed messages as d
 | Tool | Source (the only ones allowed) | Pin |
 |---|---|---|
 | Graphify | PyPI `graphifyy` (double y), repo Graphify-Labs/graphify | `==0.9.77` |
-| Ponytail | github.com/DietrichGebert/ponytail | commit + sha256 of `SKILL.md` |
-| Agent Skills | github.com/addyosmani/agent-skills | commit |
+| Ponytail | github.com/DietrichGebert/ponytail, MIT | commit + sha256 of `SKILL.md` and `LICENSE` |
+| Agent Skills | github.com/addyosmani/agent-skills, MIT | commit |
 | Trail of Bits skills (packs only) | github.com/trailofbits/skills, CC-BY-SA-4.0 | commit + listed skill folders |
 | wshobson agents (packs only) | github.com/wshobson/agents, MIT | commit + listed skill folders |
 | ECC (packs only) | github.com/affaan-m/ECC, MIT | commit + listed skill folders |
 
 From Agent Skills it copies the skills, slash commands (with the `agent-skills:` prefix stripped, because they
 are installed as plain files, not as a plugin) and agents named in `sources.lock`: 15 skills, 7 commands and
-4 agents at the current pins. The last three sources are fetched only when a `--pack` needs them, and only the
-skill folders listed in `sources.lock` are copied, each with its upstream `LICENSE`.
+4 agents at the current pins. Each Ponytail and Agent Skills skill folder gets its upstream `LICENSE`; the Agent
+Skills one also covers its agents and commands, which are single files. The last three sources are fetched only
+when a `--pack` needs them, and only the skill folders listed in `sources.lock` are copied, each with its
+upstream `LICENSE`.
 
 `bootstrap.sh` fetches and checks every source it needs before it installs anything, and stops with nothing
-installed if the Ponytail hash or any commit is not the pinned one, or if a pinned third-party skill turns out to
+installed if a Ponytail hash or any commit is not the pinned one, or if a pinned third-party skill turns out to
 need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or contains symlinks.
 
 ## Packs
@@ -72,10 +75,15 @@ wins: `blockchain-developer` refuses a token whose `decimals()` call fails (`evm
 18), and `rust-developer` keeps `expect()` and `panic!` out of production paths (some `rust-patterns` and
 `rust-testing` examples use them).
 
-**Licences.** Trail of Bits skills are CC-BY-SA-4.0, wshobson and ECC skills MIT; their `LICENSE` sits in each
-installed copy. A tailored override of one of them is a derivative work: it must keep the attribution and, for
-Trail of Bits, stay under CC-BY-SA-4.0. `profile_save.sh` copies the `LICENSE` into the override folder for
-that reason.
+**Licences.** Trail of Bits skills are CC-BY-SA-4.0; Ponytail, Agent Skills, wshobson and ECC are MIT. Every
+installed third-party skill folder holds its upstream `LICENSE`. A tailored override of a third-party file is a
+derivative work: it must keep the attribution and, for Trail of Bits, stay under CC-BY-SA-4.0. So
+`profile_save.sh` copies the `LICENSE` into each tailored third-party skill folder, writes
+`LICENSES/agent-skills.txt` when a profile tailors an Agent Skills agent or command, and lists every tailored
+third-party item with its source and licence in `NOTICE.md` (the changes themselves are in `CHANGES.diff`). A
+project installed before 2026-10-27 has no `LICENSE` in its Ponytail and Agent Skills folders; `profile_save.sh`
+then warns and marks the licence text missing in `NOTICE.md`. Replay the profile in a fresh project with
+`--profile` and save it again from there to fix it.
 
 **Not installed, and why** (evaluated 2026-10-26, see the comments in `sources.lock`):
 
@@ -192,7 +200,8 @@ interview you about your product, propose tweaks, and apply only the ones you ap
 2. It edits the installed copies in `./.claude/{skills,commands,agents}`. Upstream and the pins are never edited.
 3. `scripts/profile_save.sh NAME` diffs `./.claude` against the pristine snapshot and writes
    `profiles/NAME/`: `overrides/` (changed or new files), `remove.txt` (upstream items dropped),
-   `profile.lock` (the pins and packs it was made with) and `CHANGES.diff` (human-readable, never applied).
+   `profile.lock` (the pins and packs it was made with), `CHANGES.diff` (human-readable, never applied), and for
+   tailored third-party files `NOTICE.md` and `LICENSES/` (see "Licences").
    `PROJECT.md`, the confirmed product summary, is written next to them. Review all of it in a pull request.
 4. Next session: `bootstrap.sh --scope project --profile NAME` installs upstream at the pins, plus the packs the
    profile was saved with, then replays the profile and adds `PROJECT.md` to `.claude/CLAUDE.md`. It warns if
@@ -212,6 +221,8 @@ Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/`
 when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
 - Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
+- Ponytail's `LICENSE` matches its pin and every Ponytail and Agent Skills skill folder has its MIT `LICENSE`; a
+  changed Ponytail `LICENSE` stops the install with nothing installed.
 - `--with-rules` appends after graphify's existing `CLAUDE.md` section and replaces its own block on re-run.
 - Fail-open rewrite of graphify's hooks keeps other settings keys and valid JSON.
 - `--scope project`, and `project-init.sh` on a scratch repo (report says 0 input / 0 output tokens).
@@ -221,6 +232,11 @@ when this was written). They never touch the real `~/.claude` or uv tools. The c
   warning, "nothing to save", and nine hostile profiles (settings override, `../` and absolute removals,
   non-skill removal, symlink, removal of a whole folder (two forms), removal or override of graphify's skill)
   all refused with nothing installed.
+- Profile licences: a tailored Agent Skills skill keeps its MIT `LICENSE`, a tailored Agent Skills agent gets
+  `LICENSES/agent-skills.txt`, and `NOTICE.md` lists exactly the tailored third-party items (identical on a round
+  trip); a profile with only new files gets neither; an install from before the licences were copied warns and
+  marks the licence text missing; a tailored Trail of Bits skill is listed under CC-BY-SA-4.0, this repo's own
+  skill is not listed.
 
 - Packs: `--pack` without a value and unknown pack names refused before anything is installed; dry runs at both
   scopes change nothing, and without `--pack` nothing from the packs is planned; `--pack all` installs every
@@ -268,10 +284,10 @@ so they never do.
 
 ## Updating a pin
 
-Review the upstream diff first. Then change the SHA (and, for Ponytail, the sha256 of `SKILL.md`) in
-`sources.lock`, run `--dry-run`, and open a pull request. For Trail of Bits, wshobson and ECC, read every changed
-file in the listed skill folders in full (they are marked "audited line by line"), check that each folder still
-lives at the same path, and update the audit date in `sources.lock`.
+Review the upstream diff first. Then change the SHA (and, for Ponytail, the sha256 of `SKILL.md` and of
+`LICENSE`) in `sources.lock`, run `--dry-run`, and open a pull request. For Trail of Bits, wshobson and ECC, read
+every changed file in the listed skill folders in full (they are marked "audited line by line"), check that each
+folder still lives at the same path, and update the audit date in `sources.lock`.
 
 Ponytail was reviewed against upstream `main` (`09c434ab`) on 2026-10-26. Since the pin, only commit `df9e8994`
 (2026-10-16) changes `skills/ponytail/SKILL.md`: it adds `off` to the frontmatter `argument-hint`. Ponytail's

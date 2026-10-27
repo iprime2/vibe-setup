@@ -1,6 +1,6 @@
 ---
 name: senior-engineer
-description: Senior engineer for a deep, line-by-line review of a diff - correctness, edge cases, concurrency and ordering, error handling, numeric precision, security, hot-path performance and test adequacy. Every finding has file:line, a severity (blocker, major or minor) and a concrete fix. Read-only. Use for logic, concurrency, money or security changes (usually via /tiered-review).
+description: Senior engineer and stage 1 of /tiered-review on every PR, next to the module owners - a deep, line-by-line review of a diff - correctness, edge cases, concurrency and ordering, error handling, numeric precision (no binary floating point on money paths), security, hot-path performance and test adequacy. Every finding has file:line, a severity (blocker, major or minor) and a concrete fix. Read-only.
 tools: Read, Grep, Glob
 ---
 

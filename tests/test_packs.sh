@@ -201,6 +201,8 @@ check "profile.lock records the packs" grep -qx "PROFILE_PACKS=\"$ALL_PACKS\"" "
 check "profile.lock records the Trail of Bits pin" grep -q "PROFILE_TOB_SHA=\"$(lockvar "$REPO" TOB_SHA)\"" "$L/profile.lock"
 check "the tailored third-party skill keeps its LICENSE" test -f "$L/overrides/skills/$TOB1/LICENSE"
 check "this repo's own skill gets no LICENSE" test ! -e "$L/overrides/skills/quant-researcher/LICENSE"
+check "NOTICE.md lists the third-party skill under CC-BY-SA-4.0" grep -q "skills/$TOB1\` | Trail of Bits (trailofbits/skills) | CC-BY-SA-4.0 | overrides/skills/$TOB1/LICENSE" "$L/NOTICE.md"
+check "NOTICE.md does not list this repo's own skill" bash -c "! grep -q quant-researcher '$L/NOTICE.md'"
 check "only the two tweaks were captured" test "$(cd "$L/overrides" && find . -name SKILL.md | wc -l | tr -d ' ')" -eq 2
 mkdir -p "$W/p2"; cd "$W/p2" || exit 2
 capture bash "$R/bootstrap.sh" --scope project --profile withpacks

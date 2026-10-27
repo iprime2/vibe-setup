@@ -193,9 +193,15 @@ if [ "$DRY" != 1 ]; then
   got="$(sha256 "$tmp/ponytail.md")"
   [ "$got" = "$PONYTAIL_SKILL_SHA256" ] || die "ponytail SKILL.md differs from the reviewed version (sha256 $got). Not installing."
 fi
+run curl -fsSL -o "$tmp/ponytail.LICENSE" "https://raw.githubusercontent.com/$PONYTAIL_REPO/$PONYTAIL_SHA/LICENSE"
+if [ "$DRY" != 1 ]; then
+  got="$(sha256 "$tmp/ponytail.LICENSE")"
+  [ "$got" = "$PONYTAIL_LICENSE_SHA256" ] || die "ponytail LICENSE differs from the reviewed version (sha256 $got). Not installing."
+fi
 echo "-- agent-skills @ ${AGENT_SKILLS_SHA:0:8}"
 fetch_commit "$AGENT_SKILLS_REPO" "$AGENT_SKILLS_SHA" "$src"
 if [ "$DRY" != 1 ]; then
+  [ -f "$src/LICENSE" ] || die "$AGENT_SKILLS_REPO has no LICENSE at the pinned commit. Not installing."
   for s in $AGENT_SKILLS_LIST; do
     [ -d "$src/skills/$s" ] || die "upstream skill missing at the pinned commit: $s"
   done
@@ -231,12 +237,14 @@ fi
 echo "== ponytail @ ${PONYTAIL_SHA:0:8}"
 run mkdir -p "$CLAUDE_DIR/skills/ponytail"
 run cp "$tmp/ponytail.md" "$CLAUDE_DIR/skills/ponytail/SKILL.md"
+run cp "$tmp/ponytail.LICENSE" "$CLAUDE_DIR/skills/ponytail/LICENSE"
 
 echo "== agent-skills @ ${AGENT_SKILLS_SHA:0:8}"
 run mkdir -p "$CLAUDE_DIR/skills" "$CLAUDE_DIR/commands" "$CLAUDE_DIR/agents"
 for s in $AGENT_SKILLS_LIST; do
   run rm -rf "${CLAUDE_DIR:?}/skills/$s"
   run cp -R "$src/skills/$s" "$CLAUDE_DIR/skills/$s"
+  run cp "$src/LICENSE" "$CLAUDE_DIR/skills/$s/LICENSE"
 done
 for c in $AGENT_COMMANDS; do
   run cp "$src/.claude/commands/$c.md" "$CLAUDE_DIR/commands/$c.md"

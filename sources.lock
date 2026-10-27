@@ -7,16 +7,19 @@ GRAPHIFY_SPEC="graphifyy==0.9.77"
 
 # Ponytail: github.com/DietrichGebert/ponytail (MIT). Commit of 2026-10-08.
 # The sha256 is of skills/ponytail/SKILL.md at that commit; it was read in full before pinning.
+# The second sha256 is of the repo's LICENSE at that commit, installed next to SKILL.md.
 PONYTAIL_REPO="DietrichGebert/ponytail"
 PONYTAIL_SHA="2a1fe842d078cf66ec7f3e6096a8ca4279c2cad7"
 PONYTAIL_SKILL_SHA256="ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c"
+PONYTAIL_LICENSE_SHA256="fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab"
 
 # Agent Skills: github.com/addyosmani/agent-skills (MIT). Commit of 2026-10-03.
 # Pinned, not audited line by line.
 AGENT_SKILLS_REPO="addyosmani/agent-skills"
 AGENT_SKILLS_SHA="1401c8b8030e023baeebb31781a6653fe8e93026"
 
-# What to copy from agent-skills (skills/<name>, .claude/commands/<name>.md, agents/*.md).
+# What to copy from agent-skills (skills/<name>, .claude/commands/<name>.md, agents/*.md). The upstream
+# LICENSE is copied into each skill folder; it also covers the agents and commands of the same install.
 # code-simplification (/code-simplify), browser-testing-with-devtools (/test and the
 # web-performance-auditor agent) and performance-optimization are included so those do not dangle.
 AGENT_SKILLS_LIST="interview-me spec-driven-development planning-and-task-breakdown incremental-implementation test-driven-development debugging-and-error-recovery code-review-and-quality security-and-hardening frontend-ui-engineering git-workflow-and-versioning shipping-and-launch doubt-driven-development code-simplification browser-testing-with-devtools performance-optimization"
