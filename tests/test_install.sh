@@ -51,6 +51,10 @@ echo "== re-running is idempotent"
 capture bash "$REPO/bootstrap.sh" --with-rules
 expect_rc "second run exits 0" 0
 if [ "$(grep -c 'vibe-setup:begin' "$C/CLAUDE.md")" -eq 1 ]; then ok "rules block appears once"; else bad "rules block count"; fi
+e="$(grep -n 'vibe-setup:end' "$C/CLAUDE.md" | cut -d: -f1)"; g="$(grep -n '^# graphify$' "$C/CLAUDE.md" | cut -d: -f1)"
+if [ "$(printf '%s\n' "$e" | grep -c .)" -eq 1 ] && [ -n "$g" ] && [ "$e" -lt "$g" ]; then
+  ok "the rules block has one end marker and sits above graphify's section"
+else bad "rules block end marker or position"; fi
 if [ "$(grep -cE '^#{1,2} graphify' "$C/CLAUDE.md")" -eq 1 ]; then ok "graphify section appears once"; else bad "graphify section count"; fi
 
 echo "== a changed Ponytail file is refused"
