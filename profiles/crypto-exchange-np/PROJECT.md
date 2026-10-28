@@ -1,6 +1,6 @@
 # Project: crypto-exchange-np
 
-1. **Product:** a crypto exchange for Nepal, built ahead of legalisation. Spot and perpetual futures, with NPR withdrawals straight to Nepali bank accounts (no P2P). Users: Nepali retail and institutional traders, global institutions, global market makers.
+1. **Product:** Bitkosh ("bit" + kosh, a digital treasury), a crypto exchange for Nepal, built ahead of legalisation. Spot and perpetual futures, with NPR withdrawals straight to Nepali bank accounts (no P2P). Users: Nepali retail and institutional traders, global institutions, global market makers.
 2. **Stack:** Rust for matching, risk and liquidation, the ledger, and REST/WebSocket/FIX gateways; C++ for the market-maker gateway; Next.js for web and admin; Expo for iOS and Android; shared TypeScript packages; Postgres, Redis, and Kafka or Redpanda; Solidity and other chain integrations for custody only.
 3. **Layout:** monorepo with `engine/`, `services/`, `mm-gateway/`, `web/`, `mobile/`, `packages/`, `contracts/`, `infra/`.
 4. **Stage and goal:** greenfield, before legalisation. "Good" means launch-ready, audited and regulator-presentable: spot and perp on test funds, NPR deposits and withdrawals end to end against a simulated bank, institutions and market makers connected, clean security and reconciliation reports.
