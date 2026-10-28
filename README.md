@@ -224,21 +224,22 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 227 checks
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 233 checks
 when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
 - Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
 - Ponytail's `LICENSE` matches its pin and every Ponytail and Agent Skills skill folder has its MIT `LICENSE`; a
   changed Ponytail `LICENSE` stops the install with nothing installed.
-- `--with-rules` appends after graphify's existing `CLAUDE.md` section and replaces its own block on re-run.
+- `--with-rules` writes its block above graphify's `CLAUDE.md` section and replaces it in place on re-run.
 - Fail-open rewrite of graphify's hooks keeps other settings keys and valid JSON.
 - `--scope project`, and `project-init.sh` on a scratch repo (report says 0 input / 0 output tokens).
 
 - Profiles: tweak, remove and add files in a project install, capture with `profile_save.sh`, replay in a fresh
-  project (all changes present, `PROJECT.md` block once), re-run, re-save and compare (identical), pin-drift
-  warning, "nothing to save", and nine hostile profiles (settings override, `../` and absolute removals,
-  non-skill removal, symlink, removal of a whole folder (two forms), removal or override of graphify's skill)
-  all refused with nothing installed.
+  project (all changes present, `PROJECT.md` block once), re-run (one block, above graphify's section; a block
+  an older run left below that section is moved, not copied; a begin marker already lost is reported),
+  re-save and compare (identical), pin-drift warning, "nothing to save", and nine hostile profiles (settings
+  override, `../` and absolute removals, non-skill removal, symlink, removal of a whole folder (two forms),
+  removal or override of graphify's skill) all refused with nothing installed.
 - Profile licences: a tailored Agent Skills skill keeps its MIT `LICENSE`, a tailored Agent Skills agent gets
   `LICENSES/agent-skills.txt`, and `NOTICE.md` lists exactly the tailored third-party items (identical on a round
   trip); a profile with only new files gets neither; an install from before the licences were copied warns and
@@ -307,4 +308,6 @@ from the pinned commit; that diff has not been reviewed.
 by `bootstrap.sh` from `~/.claude` (or `./.claude`, including `./.claude/.vibe-setup/`); pack items are listed in
 `packs.conf`. The rules block sits
 between `<!-- vibe-setup:begin -->` and `<!-- vibe-setup:end -->` in `CLAUDE.md`; a profile's block uses
-`<!-- vibe-setup:begin:profile:NAME -->` and the matching end marker.
+`<!-- vibe-setup:begin:profile:NAME -->` and the matching end marker. Both sit above graphify's section:
+`graphify install` rewrites that section down to the next `# ` heading, which cut off a begin marker placed
+below it and left a second copy of the block on the next run.

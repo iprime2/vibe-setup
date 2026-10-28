@@ -71,7 +71,28 @@ check "the snapshot still has the removed skill" test -d "$C/.vibe-setup/pristin
 echo "== re-running and re-saving"
 capture bash "$R/bootstrap.sh" --scope project --profile acme
 expect_rc "second replay exits 0" 0
-if [ "$(grep -c 'vibe-setup:begin:profile:acme' "$C/CLAUDE.md")" -eq 1 ]; then ok "still one PROJECT.md block"; else bad "PROJECT.md block duplicated"; fi
+one_block() {   # description: exactly one acme block, its text once, above graphify's section
+  local f="$C/CLAUDE.md" b e g
+  b="$(grep -n 'vibe-setup:begin:profile:acme' "$f" | cut -d: -f1)"; e="$(grep -c 'vibe-setup:end:profile:acme' "$f")"
+  g="$(grep -n '^# graphify$' "$f" | cut -d: -f1)"
+  if [ "$(printf '%s\n' "$b" | grep -c .)" -eq 1 ] && [ "$e" -eq 1 ] && [ "$(grep -c 'Trading operations' "$f")" -eq 1 ] \
+     && [ -n "$g" ] && [ "$b" -lt "$g" ]; then ok "$1"; else bad "$1"; sed 's/^/    /' "$f"; fi
+}
+one_block "still one PROJECT.md block, with one end marker, above graphify's section"
+echo "== a block below graphify's section (older runs) is moved, not duplicated"
+{ sed -n '/^# graphify$/,$p' "$C/CLAUDE.md"; echo; sed -n '/vibe-setup:begin:profile:acme/,/vibe-setup:end:profile:acme/p' "$C/CLAUDE.md"; } > "$W/old-layout.md"
+mv "$W/old-layout.md" "$C/CLAUDE.md"
+capture bash "$R/bootstrap.sh" --scope project --profile acme
+expect_rc "the re-run exits 0" 0
+one_block "one PROJECT.md block, moved above graphify's section"
+if printf '%s\n' "$OUT" | grep -q 'WARN:.*without its pair'; then bad "a lost-marker warning on a healthy file"; else ok "no lost-marker warning"; fi
+cp "$C/CLAUDE.md" "$W/claude-before.md"
+capture bash "$R/bootstrap.sh" --scope project --profile acme
+check "another re-run leaves CLAUDE.md unchanged" cmp -s "$W/claude-before.md" "$C/CLAUDE.md"
+echo "== a begin marker lost in an older run is reported"
+printf '# graphify\nx\n\n# Acme\nTrading operations assistant.\n<!-- vibe-setup:end:profile:acme -->\n' > "$W/lost.md"
+capture python3 -I -B "$R/scripts/append_block.py" "$W/lost.md" "$R/profiles/acme/PROJECT.md" profile:acme
+expect_out "append_block.py warns about the leftover end marker" "WARN: .* has a vibe-setup marker without its pair"
 cd "$W/p2" || exit 2
 capture bash "$R/scripts/profile_save.sh" acme2
 expect_rc "re-save exits 0" 0

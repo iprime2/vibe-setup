@@ -229,6 +229,9 @@ echo "== graphify ($GRAPHIFY_SPEC)"
 if [ "$(id -u)" = 0 ]; then export UV_TOOL_BIN_DIR="${UV_TOOL_BIN_DIR:-/usr/local/bin}"; fi
 export PATH="${UV_TOOL_BIN_DIR:-$HOME/.local/bin}:$PATH"
 run uv tool install "$GRAPHIFY_SPEC"
+# graphify rewrites its CLAUDE.md section down to the next "# " heading, which cut off a vibe-setup begin
+# marker sitting below it (older runs put blocks there); move this repo's blocks above it first.
+if [ -f "$CLAUDE_DIR/CLAUDE.md" ]; then run python3 -I "$HERE/scripts/append_block.py" "$CLAUDE_DIR/CLAUDE.md"; fi
 if [ "$SCOPE" = project ]; then run graphify install --project; else run graphify install; fi
 if [ "$DRY" != 1 ] && [ -f "$CLAUDE_DIR/settings.json" ]; then
   run python3 -I "$HERE/scripts/failopen_hooks.py" "$CLAUDE_DIR/settings.json"
