@@ -1,0 +1,34 @@
+# Lint and the full regression suite (tests/run.sh) on every pull request and push to main.
+# The suite needs network (PyPI, GitHub) and takes a while: every case is a real install in a throwaway HOME.
+name: tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: shellcheck
+        run: shellcheck -S warning bootstrap.sh project-init.sh session-start.sh scripts/*.sh tests/*.sh
+      - name: pyflakes
+        run: python3 -m pip install --quiet pyflakes==4.1.0 && python3 -m pyflakes scripts/*.py skills/agent-memory/check.py
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: tests/run.sh
+        run: bash tests/run.sh

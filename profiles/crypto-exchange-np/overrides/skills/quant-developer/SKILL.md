@@ -21,6 +21,12 @@ money, stay inside its risk limits, and stop on command. Each section below is a
 The production "strategy" code here is the exchange's own pricing and risk: index and mark price, funding,
 margin, liquidation, and any hedging of the insurance fund. The sections below apply to it, and:
 
+- In Milestone 1 (spot) the only pricing code is the USDT/NPR reference rate (NRB's daily USD/NPR anchor times
+  a live USDT/USD price), the coin reference prices behind the price bands, and the testnet liquidity bot.
+  Sources come from config with staleness and minimum-source rules; the bot has inventory and daily-loss
+  caps on its own house account and a kill switch that stays off after a restart; a stale or missing source
+  widens or pulls quotes, never quotes on an old value. Index, mark price, funding, margin and liquidation
+  are Milestone 2.
 - Pre-trade risk limits run on every user order in the gateway and the engine, market makers included.
 - The kill switch works per market and globally: cancel-only, reduce-only and halt states, with the same
   restart rule (a restart never resumes trading on its own).

@@ -34,17 +34,39 @@ of running it. Never quote credentials; cite the file and line only.
   files or callbacks.
 - **Callbacks and files.** Signatures verified, replays rejected, payloads treated as untrusted; dates
   converted explicitly (including Bikram Sambat if a provider uses it) and tested.
+- **Deposits.** Statement import keeps a cursor and dedups on the bank transaction id. A deposit is matched by
+  reference code, then by the sender account linked at KYC; unmatched or third-party-sender deposits go to
+  suspense and are returned to the source account, never credited; cash and cheque deposits are refused by
+  policy; crediting is one idempotent ledger posting per bank transaction.
 - **Reconciliation.** Daily against bank statements or settlement files; unmatched items go to suspense with
   an owner; an unexplained difference pauses NPR withdrawals.
-- **Operations.** Cut-off times and bank holidays handled; provider credentials come from the secret store,
-  never from code or logs.
+- **Operations.** Saturday is the only weekend day; bank holidays come from an admin-maintained Bikram Sambat
+  table with effective dates, never a constant; each rail has its own cut-off time and per-transaction cap in
+  config, and payouts above a cap are split or routed to another rail by rule; provider credentials come from
+  the secret store, never from code or logs. A change to the bank simulator keeps every behaviour above; a
+  simulator that drops a cut-off, a cap or the dedup is a finding.
+
+## Specs, ADRs and plans; milestone scope
+
+- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
+  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
+  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
+  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
+  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
+  FOLLOW-UPS.
+- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
+  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
+  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
+  never above minor, unless the change itself is Milestone 2 work.
+- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
+  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
 
 ## Output
 
 ```markdown
 ## NPR payments review: <change>
 
-**Verdict:** APPROVE | REQUEST CHANGES
+**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 **Blockers:** N | **Major:** N | **Minor:** N
 
 | # | Severity | file:line | Finding | Concrete fix |

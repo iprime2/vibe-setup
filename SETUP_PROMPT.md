@@ -9,7 +9,7 @@ Words you can add to the last line of the prompt:
 
 - `skip tailoring`: install the untailored toolkit at user scope; no interview.
 - `profile <name>`: reuse a saved profile (`profiles/<name>/`); no interview.
-- `with rules`: also install `rules/CLAUDE.md` into `CLAUDE.md` (draft, review it first).
+- `with rules`: also install `rules/CLAUDE.md` into `CLAUDE.md` (review it first).
 - `project scope`: install untailored into `./.claude` instead of `~/.claude`.
 - `project init`: also wire graphify into the current git repo and build a code-only graph.
 - `packs <list>`: also install optional packs, comma-separated (`roles`, `quant`, `systems`, `web3`,
@@ -29,6 +29,8 @@ Set up my vibe-coding toolkit in this environment from my setup repo, iprime2/vi
 1. DETECT (read-only). Tell me: which agent you are, the OS, whether this is a Claude Code cloud session (CLAUDE_CODE_REMOTE=true), the user, the working directory and whether it is a git repo, and the versions of git, uv, node and claude. If uv is missing and this is not a cloud session, ask me before installing it.
 
 2. GET THE REPO. If ~/vibe-setup or /home/user/vibe-setup already exists, use it and tell me its commit (git -C <dir> log -1 --oneline). Otherwise fetch iprime2/vibe-setup: in a cloud session attach it with add_repo (read access) and clone it where that tool says; on a local machine run git clone https://github.com/iprime2/vibe-setup ~/vibe-setup. Clone it outside any project repo. If it cannot be reached, stop and tell me; do not look for another source.
+
+2b. EXISTING PROJECT. If the working directory is a git repo that already commits a project-scope toolkit (it has .claude/.vibe-setup/packs), do not install anything: run bash <repo>/session-start.sh from the repo root (add the profile name if I gave one), show me its output, and stop. Run steps 3 to 10 only if I ask for a toolkit refresh.
 
 3. READ BEFORE RUNNING. Read sources.lock, packs.conf, bootstrap.sh and the files in scripts/, then post a normal message of at most five lines saying what bootstrap.sh will do and what it pins (including the packs I asked for, if any); a one-line status note while you work does not count.
 

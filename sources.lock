@@ -4,6 +4,10 @@
 
 # Graphify: PyPI package "graphifyy" (double y). Repo: github.com/Graphify-Labs/graphify
 GRAPHIFY_SPEC="graphifyy==0.9.77"
+# graphify's own dependencies are resolved as they were on this date (uv --exclude-newer), so a later
+# release of a dependency cannot reach the hooks that run on every tool call. 0.9.77 was uploaded 2026-10-05
+# and reviewed 2026-10-26. Move this date only together with a reviewed GRAPHIFY_SPEC change.
+GRAPHIFY_EXCLUDE_NEWER="2026-10-26T00:00:00Z"
 
 # Ponytail: github.com/DietrichGebert/ponytail (MIT). Commit of 2026-10-08.
 # The sha256 is of skills/ponytail/SKILL.md at that commit; it was read in full before pinning.

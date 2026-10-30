@@ -29,9 +29,11 @@ reconciliation that proves the books match the outside world.
 
 ## Exact Amounts and Rounding
 
-- Integer minor units, or fixed-scale `NUMERIC` with a scale per currency or asset: 2 or 3 for most fiat,
-  up to 18 for some tokens (`NUMERIC(38,18)`, or integer base units in `NUMERIC(78,0)`). Never binary
-  floating point, anywhere in the money path, including JSON parsing.
+- Integers in each asset's minor units, the only form in this project (`SPEC.md`): `Amount(i128)` in Rust,
+  `NUMERIC(39,0)` in Postgres (`BIGINT` only where the range provably fits), and decimal strings only at the
+  API and display boundary. The scale per asset lives in `reference-data` (NPR 2; tokens up to 18). Never
+  binary floating point or a decimal type with a fractional scale, anywhere in the money path, including
+  JSON parsing.
 - The rounding mode is explicit per operation (half-even, half-up or toward zero), applied once at the
   boundary. Book the rounding residue to a dedicated account instead of losing it.
 - Currency conversion is two postings with the rate recorded, through a conversion account.

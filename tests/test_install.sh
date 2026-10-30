@@ -26,6 +26,7 @@ expect_out "a profile at user scope is refused" "needs --scope project"
 echo "== dry run changes nothing"
 capture bash "$REPO/bootstrap.sh" --dry-run
 expect_rc "dry run exits 0" 0
+expect_out "graphify's dependencies are date-pinned" "uv tool install graphifyy==[0-9.]* --exclude-newer 20"
 check "dry run created no ~/.claude" test ! -e "$HOME/.claude"
 
 echo "== user-scope install"

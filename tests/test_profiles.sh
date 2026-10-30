@@ -93,6 +93,26 @@ echo "== a begin marker lost in an older run is reported"
 printf '# graphify\nx\n\n# Acme\nTrading operations assistant.\n<!-- vibe-setup:end:profile:acme -->\n' > "$W/lost.md"
 capture python3 -I -B "$R/scripts/append_block.py" "$W/lost.md" "$R/profiles/acme/PROJECT.md" profile:acme
 expect_out "append_block.py warns about the leftover end marker" "WARN: .* has a vibe-setup marker without its pair"
+echo "== AGENTS.md carries the PROJECT.md block for other coding agents"
+if [ "$(grep -c 'vibe-setup:begin:profile:acme' "$W/p2/AGENTS.md" 2>/dev/null)" = 1 ] && [ "$(grep -c 'Trading operations' "$W/p2/AGENTS.md")" = 1 ]; then
+  ok "AGENTS.md has the block once after several re-runs"; else bad "AGENTS.md block missing or duplicated"; fi
+echo "== a re-run that would overwrite tailoring stops before changing anything"
+cd "$W/p2" || exit 2
+cp "$C/skills/interview-me/SKILL.md" "$W/interview-me.orig"
+echo "<!-- local edit -->" >> "$C/skills/interview-me/SKILL.md"
+cp "$C/skills/interview-me/SKILL.md" "$W/interview-me.edited"
+capture bash "$R/bootstrap.sh" --scope project --profile acme --dry-run
+expect_rc "a re-run that would lose an edit exits 1" 1
+expect_out "and names the file" "skills/interview-me/SKILL.md (changed)"
+check "the edit is untouched" cmp -s "$W/interview-me.edited" "$C/skills/interview-me/SKILL.md"
+capture bash "$R/bootstrap.sh" --scope project --profile acme --force --dry-run
+expect_rc "--force goes ahead" 0
+expect_out "and warns" "WARN: --force: overwriting tailoring"
+cp "$W/interview-me.orig" "$C/skills/interview-me/SKILL.md"
+cd "$W/p1" || exit 2
+capture bash "$R/bootstrap.sh" --scope project --dry-run
+expect_rc "a tailored install re-run without its profile exits 1" 1
+expect_out "and lists a tailored file" "skills/acme-domain/SKILL.md (added"
 cd "$W/p2" || exit 2
 capture bash "$R/scripts/profile_save.sh" acme2
 expect_rc "re-save exits 0" 0
