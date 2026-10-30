@@ -22,7 +22,7 @@ Pick the next pending task from the plan. Then:
 5. Run the full test suite to check for regressions
 6. Run the build to verify compilation
 7. Commit on the task branch with a Conventional Commits message. The task branch is `feat/<ticket>-<short-name>`, created from `origin/main` (`git fetch origin && git checkout -B feat/<ticket>-<short-name> origin/main`). In a Claude cloud session that can only push its assigned branch, reset that branch to `origin/main` first and use it. Never commit to `main`, and never put a second task on a branch whose PR is still open.
-8. Push the branch and open a PR titled `<ticket>: <task title>` whose body lists the acceptance criteria and the tests added. Tick the task's boxes in `tasks/todo.md` in the task's last commit, then run `/tiered-review` (it posts its verdicts on the PR) and stop for the user. A commit pushed after the review needs a new review. The user approves and merges; the next task starts from the updated `origin/main`.
+8. In the task's last commit, tick the boxes in `tasks/todo.md` that this PR meets (a box that needs the review or the owner's acceptance is ticked in a later PR). Push the branch and open a PR titled `<ticket>: <task title>` whose body lists the acceptance criteria and the tests added. Run `/tiered-review` (it posts its verdicts on the PR) and stop for the user. A commit pushed after the review needs a new review. The user approves and merges; the next task starts from the updated `origin/main`.
 
 ## Autonomous: the whole plan (`/build auto`)
 
