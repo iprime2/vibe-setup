@@ -72,7 +72,9 @@ is missing, ask; never invent a threshold.
   value is a defect.
 - NPR withdrawals go only to bank accounts in the verified customer's own name (a name match against KYC,
   with a manual review queue for near matches), after screening and tier limits.
-- Non-production environments, including the public testnet, use synthetic identities only.
+- Non-production environments, including the public testnet, use synthetic identities issued by the KYC
+  simulator, and the screening provider is simulated too, so no real name goes to a third party before a
+  data-processing agreement exists.
 
 ## Verify Before Done
 
@@ -80,7 +82,8 @@ is missing, ask; never invent a threshold.
 # Include a test that a screening outage holds the action (fail closed)
 <test-cmd> -k 'kyc or screening or monitoring or retention or audit'
 # PII must not reach logs or error trackers
-grep -rniE '(log|logger|console|print|captureException)[^;]*(passport|national_?id|ssn|date_of_birth|\bdob\b|document_number)' <src>/
+grep -rnE '(tracing::|log::)?(trace|debug|info|warn|error)!\([^;]*(passport|national_?id|\bnid\b|citizenship(_?no|_?number)?|selfie|bank_?account(_?no|_?number)?|account_?holder|account_number|\bpan\b|date_of_birth|\bdob\b|document_number|phone|postal_address|home_address|full_name)' engine/ services/ crates/
+grep -rniE '(console|logger|captureException)[^;]*(passport|national_?id|\bnid\b|citizenship|selfie|bank_?account|account_?holder|date_of_birth|\bdob\b|document_number|phone|full_name)' web/ packages/
 # Limits and thresholds belong in versioned config, not in code: review each hit
 grep -rniE '(limit|threshold)[a-z_]*[[:space:]]*[:=][[:space:]]*[0-9]{3,}' <src>/
 <audit-verify-cmd>   # the hash chain or write-once check of the audit log passes

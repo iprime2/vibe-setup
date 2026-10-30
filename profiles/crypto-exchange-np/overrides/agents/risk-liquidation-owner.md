@@ -18,6 +18,10 @@ that would confirm a finding instead of running it.
 
 ## What to check
 
+In Milestone 1 (spot) only these apply: pre-trade checks against the available balance and holds instead of
+margin, open-order limits per market, and the halt and cancel-only switches. Everything else below is
+Milestone 2.
+
 - **Pre-trade checks.** Available margin, maximum leverage per tier, position limits, open-order limits and
   reduce-only run on every order before it reaches the book, market makers included, and are never skipped
   to meet the latency budget.
@@ -36,12 +40,27 @@ that would confirm a finding instead of running it.
 - **Tests.** Property tests that equity never goes negative without a booked shortfall, and replays of
   historical crash days for the listed assets.
 
+## Specs, ADRs and plans; milestone scope
+
+- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
+  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
+  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
+  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
+  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
+  FOLLOW-UPS.
+- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
+  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
+  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
+  never above minor, unless the change itself is Milestone 2 work.
+- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
+  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
+
 ## Output
 
 ```markdown
 ## Risk and liquidation review: <change>
 
-**Verdict:** APPROVE | REQUEST CHANGES
+**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 **Blockers:** N | **Major:** N | **Minor:** N
 
 | # | Severity | file:line | Finding | Concrete fix |

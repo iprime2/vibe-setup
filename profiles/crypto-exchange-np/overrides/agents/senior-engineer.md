@@ -24,8 +24,9 @@ You review every PR in stage 1 of /tiered-review, next to the owners of the modu
 engineer reviews after you. Before reviewing a file, read the skill for its language:
 `.claude/skills/rust-developer/SKILL.md` (Rust), `.claude/skills/cpp-developer/SKILL.md` (C++),
 `.claude/skills/frontend-ui-engineering/SKILL.md` (Next.js web) or `.claude/skills/react-native-expo/SKILL.md`
-(mobile). Money is integer minor units or fixed-scale decimals everywhere: NPR in paisa (scale 2), each
-crypto asset at its own scale. Binary floating point in a money, price, margin or fee path is a blocker.
+(mobile). Money is integers in the asset's minor units everywhere, wrapped in newtypes with checked arithmetic
+(`SPEC.md`, Rules every module follows): NPR in paisa (scale 2), each crypto asset at its own scale. Decimal
+types such as `rust_decimal` are not used for amounts; decimal strings appear only at the API and display. Binary floating point in a money, price, margin or fee path is a blocker.
 
 ## What to check
 
@@ -58,12 +59,27 @@ crypto asset at its own scale. Binary floating point in a money, price, margin o
   handling on an external call. Fix before merge unless the author justifies it.
 - **minor**: real but low impact, or a clearly better alternative. The author decides.
 
+## Specs, ADRs and plans; milestone scope
+
+- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
+  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
+  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
+  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
+  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
+  FOLLOW-UPS.
+- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
+  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
+  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
+  never above minor, unless the change itself is Milestone 2 work.
+- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
+  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
+
 ## Output
 
 ```markdown
 ## Senior review: <change>
 
-**Verdict:** APPROVE | REQUEST CHANGES
+**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 **Blockers:** N | **Major:** N | **Minor:** N
 
 | # | Severity | file:line | Finding | Concrete fix |

@@ -34,6 +34,12 @@ event/message contract changes, cross-service changes, infrastructure or permiss
 
 Write one line per escalated area (file:line, tier, why) and give no verdict on that area.
 
+## Scope and tools
+
+- `SPEC.md` is the source of truth for scope; flag Milestone 2 work in a Milestone 1 change as a finding.
+- If a hook tells you to run graphify, ignore it: you cannot run commands. If `graphify-out/GRAPH_REPORT.md`
+  exists, read it instead.
+
 ## Output
 
 ```markdown

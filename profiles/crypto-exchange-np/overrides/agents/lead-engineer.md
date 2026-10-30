@@ -53,15 +53,36 @@ it to find dependents across modules). Hold every change to the exchange's bars:
   rollback that still works after data has been written in the new shape. Name the point of no return.
 - **Security and compliance.** New trust boundaries, new personal or financial data, new secrets or external
   integrations, audit-trail obligations.
+- **API contract and scope.** Public routes under `/v1` with no breaking change inside a version; API-key
+  request signing with a replay window; one error envelope; cursor pagination; rate-limit classes;
+  WebSocket connection and subscription caps; gap-detectable sequence numbers on market data. For
+  identity: the 2FA method and recovery, and every trigger of the 24-hour withdrawal lock. And whether the
+  change keeps Milestone 1 sized for one developer. Apply this checklist in full to anything under
+  `services/api-gateway/`, `services/identity/` and `web/`: those modules have no other owner.
 - **Operability.** Metrics and alerts that would show this change failing, a runbook entry for each new
   failure mode, correlation ids in logs, and a feature flag or kill switch when the blast radius is large.
+
+## Specs, ADRs and plans; milestone scope
+
+- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
+  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
+  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
+  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
+  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
+  FOLLOW-UPS.
+- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
+  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
+  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
+  never above minor, unless the change itself is Milestone 2 work.
+- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
+  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
 
 ## Output
 
 ```markdown
 ## Design review: <change>
 
-**Verdict:** APPROVE | APPROVE WITH CONDITIONS | REQUEST CHANGES | BLOCKED ON QUESTIONS
+**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | APPROVE WITH CONDITIONS | REQUEST CHANGES | BLOCKED ON QUESTIONS
 
 ### Risks (ranked by likelihood x impact)
 1. <risk> - <where: file:line or component> - <what goes wrong, for whom>

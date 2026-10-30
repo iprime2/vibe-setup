@@ -97,14 +97,29 @@
  3. Verification checkpoints occur after every 2-3 tasks
  4. High-risk tasks are early (fail fast)
  
-+In this project work runs in sprints: group the ordered tasks into sprints of the length the user sets, and end each sprint with a checkpoint that runs on dev.
++In this project work runs in sprints: group the ordered tasks into sprints of the length the user sets, and end each sprint with a checkpoint that runs on dev once dev exists (`SPEC-platform.md` Part B); until then, the checkpoint is CI green on `main` and `make ci` on a fresh clone.
 +
  Add explicit checkpoints to the task list target:
  
  ```markdown
 --- a/skills/financial-ledger/SKILL.md
 +++ b/skills/financial-ledger/SKILL.md
-@@ -64,6 +64,18 @@
+@@ -29,9 +29,11 @@
+ 
+ ## Exact Amounts and Rounding
+ 
+-- Integer minor units, or fixed-scale `NUMERIC` with a scale per currency or asset: 2 or 3 for most fiat,
+-  up to 18 for some tokens (`NUMERIC(38,18)`, or integer base units in `NUMERIC(78,0)`). Never binary
+-  floating point, anywhere in the money path, including JSON parsing.
++- Integers in each asset's minor units, the only form in this project (`SPEC.md`): `Amount(i128)` in Rust,
++  `NUMERIC(39,0)` in Postgres (`BIGINT` only where the range provably fits), and decimal strings only at the
++  API and display boundary. The scale per asset lives in `reference-data` (NPR 2; tokens up to 18). Never
++  binary floating point or a decimal type with a fractional scale, anywhere in the money path, including
++  JSON parsing.
+ - The rounding mode is explicit per operation (half-even, half-up or toward zero), applied once at the
+   boundary. Book the rounding residue to a dedicated account instead of losing it.
+ - Currency conversion is two postings with the rate recorded, through a conversion account.
+@@ -64,6 +66,18 @@
  - Each journal records who or what created it, the source system, the request id and a reason code.
  - Manual adjustments need two-person approval and are logged with both people.
  
@@ -145,6 +160,21 @@
  ## Rules
  
  ### 1. Hypothesis first
+--- a/skills/spec-driven-development/SKILL.md
++++ b/skills/spec-driven-development/SKILL.md
+@@ -135,6 +135,12 @@
+ ## Testing Strategy
+ [Framework, test locations, coverage requirements, test levels]
+ 
++## Data and configuration
++- Fields collected and their class (non-personal, personal, sensitive)
++- Store, encryption at rest and who may read it
++- Retention period, deletion and legal-hold behaviour
++- Every threshold, limit or fee that must come from `reference-data` or versioned config, and its owner
++
+ ## Boundaries
+ - Always: [...]
+ - Ask first: [...]
 --- a/skills/low-latency-systems/SKILL.md
 +++ b/skills/low-latency-systems/SKILL.md
 @@ -14,6 +14,8 @@
@@ -158,7 +188,7 @@
  - Avoid coordinated omission: drive load open-loop and measure from the intended send time, not from when
 --- a/skills/kyc-aml-compliance/SKILL.md
 +++ b/skills/kyc-aml-compliance/SKILL.md
-@@ -61,6 +61,19 @@
+@@ -61,13 +61,29 @@
    who, when, what, why, and the rule or model version.
  - Verify the tamper evidence on a schedule; retain logs as configured.
  
@@ -173,11 +203,22 @@
 +  value is a defect.
 +- NPR withdrawals go only to bank accounts in the verified customer's own name (a name match against KYC,
 +  with a manual review queue for near matches), after screening and tier limits.
-+- Non-production environments, including the public testnet, use synthetic identities only.
++- Non-production environments, including the public testnet, use synthetic identities issued by the KYC
++  simulator, and the screening provider is simulated too, so no real name goes to a third party before a
++  data-processing agreement exists.
 +
  ## Verify Before Done
  
  ```bash
+ # Include a test that a screening outage holds the action (fail closed)
+ <test-cmd> -k 'kyc or screening or monitoring or retention or audit'
+ # PII must not reach logs or error trackers
+-grep -rniE '(log|logger|console|print|captureException)[^;]*(passport|national_?id|ssn|date_of_birth|\bdob\b|document_number)' <src>/
++grep -rnE '(tracing::|log::)?(trace|debug|info|warn|error)!\([^;]*(passport|national_?id|\bnid\b|citizenship(_?no|_?number)?|selfie|bank_?account(_?no|_?number)?|account_?holder|account_number|\bpan\b|date_of_birth|\bdob\b|document_number|phone|postal_address|home_address|full_name)' engine/ services/ crates/
++grep -rniE '(console|logger|captureException)[^;]*(passport|national_?id|\bnid\b|citizenship|selfie|bank_?account|account_?holder|date_of_birth|\bdob\b|document_number|phone|full_name)' web/ packages/
+ # Limits and thresholds belong in versioned config, not in code: review each hit
+ grep -rniE '(limit|threshold)[a-z_]*[[:space:]]*[:=][[:space:]]*[0-9]{3,}' <src>/
+ <audit-verify-cmd>   # the hash chain or write-once check of the audit log passes
 --- a/skills/shipping-and-launch/SKILL.md
 +++ b/skills/shipping-and-launch/SKILL.md
 @@ -17,6 +17,20 @@
@@ -201,9 +242,18 @@
  ## The Pre-Launch Checklist
  
  ### Code Quality
+@@ -282,7 +296,7 @@
+ - For security pre-launch checks, see `../../references/security-checklist.md`
+ - For performance pre-launch checklist, see `../../references/performance-checklist.md`
+ - For accessibility verification before launch, see `../../references/accessibility-checklist.md`
+-- For the alerting rules and SLO-tied thresholds, see `observability-and-instrumentation`
++- For the alerting rules and SLO-tied thresholds, see `prometheus-configuration` (the `observability-and-instrumentation` skill is not installed in this project)
+ 
+ ## Common Rationalizations
+ 
 --- a/skills/quant-developer/SKILL.md
 +++ b/skills/quant-developer/SKILL.md
-@@ -16,6 +16,16 @@
+@@ -16,6 +16,22 @@
  - Moving a researched strategy into production.
  - Reviewing any change on the order path.
  
@@ -212,6 +262,12 @@
 +The production "strategy" code here is the exchange's own pricing and risk: index and mark price, funding,
 +margin, liquidation, and any hedging of the insurance fund. The sections below apply to it, and:
 +
++- In Milestone 1 (spot) the only pricing code is the USDT/NPR reference rate (NRB's daily USD/NPR anchor times
++  a live USDT/USD price), the coin reference prices behind the price bands, and the testnet liquidity bot.
++  Sources come from config with staleness and minimum-source rules; the bot has inventory and daily-loss
++  caps on its own house account and a kill switch that stays off after a restart; a stale or missing source
++  widens or pulls quotes, never quotes on an old value. Index, mark price, funding, margin and liquidation
++  are Milestone 2.
 +- Pre-trade risk limits run on every user order in the gateway and the engine, market makers included.
 +- The kill switch works per market and globally: cancel-only, reduce-only and halt states, with the same
 +  restart rule (a restart never resumes trading on its own).
@@ -230,9 +286,30 @@
  tools: Read, Grep, Glob
  ---
  
+@@ -34,6 +34,12 @@
+ 
+ Write one line per escalated area (file:line, tier, why) and give no verdict on that area.
+ 
++## Scope and tools
++
++- `SPEC.md` is the source of truth for scope; flag Milestone 2 work in a Milestone 1 change as a finding.
++- If a hook tells you to run graphify, ignore it: you cannot run commands. If `graphify-out/GRAPH_REPORT.md`
++  exists, read it instead.
++
+ ## Output
+ 
+ ```markdown
 --- a/agents/security-auditor.md
 +++ b/agents/security-auditor.md
-@@ -54,6 +54,14 @@
+@@ -1,6 +1,7 @@
+ ---
+ name: security-auditor
+ description: Security engineer focused on vulnerability detection, threat modeling, and secure coding practices. Use for security-focused code review, threat analysis, or hardening recommendations.
++tools: Read, Grep, Glob
+ ---
+ 
+ # Security Auditor
+@@ -54,6 +55,14 @@
  
  Map findings to the OWASP Top 10 for LLM Applications where relevant.
  
@@ -247,6 +324,16 @@
  ## Severity Classification
  
  | Severity | Criteria | Action |
+--- a/agents/web-performance-auditor.md
++++ b/agents/web-performance-auditor.md
+@@ -1,6 +1,7 @@
+ ---
+ name: web-performance-auditor
+ description: Web performance engineer focused on Core Web Vitals, loading, rendering, and network optimization. Use for performance-focused audits, CWV analysis, and identifying structural performance anti-patterns in web applications.
++tools: Read, Grep, Glob
+ ---
+ 
+ # Web Performance Auditor
 --- a/agents/lead-engineer.md
 +++ b/agents/lead-engineer.md
 @@ -1,6 +1,6 @@
@@ -280,9 +367,47 @@
  ## What to check
  
  - **Boundaries and ownership.** Which component owns each piece of data the change writes? Flag any service
+@@ -37,15 +53,36 @@
+   rollback that still works after data has been written in the new shape. Name the point of no return.
+ - **Security and compliance.** New trust boundaries, new personal or financial data, new secrets or external
+   integrations, audit-trail obligations.
++- **API contract and scope.** Public routes under `/v1` with no breaking change inside a version; API-key
++  request signing with a replay window; one error envelope; cursor pagination; rate-limit classes;
++  WebSocket connection and subscription caps; gap-detectable sequence numbers on market data. For
++  identity: the 2FA method and recovery, and every trigger of the 24-hour withdrawal lock. And whether the
++  change keeps Milestone 1 sized for one developer. Apply this checklist in full to anything under
++  `services/api-gateway/`, `services/identity/` and `web/`: those modules have no other owner.
+ - **Operability.** Metrics and alerts that would show this change failing, a runbook entry for each new
+   failure mode, correlation ids in logs, and a feature flag or kill switch when the blast radius is large.
+ 
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
++
+ ## Output
+ 
+ ```markdown
+ ## Design review: <change>
+ 
+-**Verdict:** APPROVE | APPROVE WITH CONDITIONS | REQUEST CHANGES | BLOCKED ON QUESTIONS
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | APPROVE WITH CONDITIONS | REQUEST CHANGES | BLOCKED ON QUESTIONS
+ 
+ ### Risks (ranked by likelihood x impact)
+ 1. <risk> - <where: file:line or component> - <what goes wrong, for whom>
 --- /dev/null
 +++ b/agents/matching-engine-owner.md
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,85 @@
 +---
 +name: matching-engine-owner
 +description: Module owner of the exchange's matching engine - order book, price-time priority, order types and flags, self-trade prevention, sequencing and deterministic replay, market states, market data and the hot-path latency budget. Read-only. Stage 1 reviewer in /tiered-review whenever a change touches matching; every finding has file:line, a severity and a concrete fix.
@@ -299,37 +424,57 @@
 +
 +1. Read `.claude/skills/low-latency-systems/SKILL.md`, `.claude/skills/rust-developer/SKILL.md` and the
 +   Deterministic Replay section of `.claude/skills/quant-developer/SKILL.md`.
-+2. Read the diff, the stated intent and why you were picked. Read the engine's documented matching rules; if
-+   there are none, that is a finding.
++2. Read the diff, the stated intent and why you were picked. Read the documented matching rules: `SPEC.md`
++   decision 6, ADR-0002 and `SPEC-matching.md`; if matching code changes while `SPEC-matching.md` is missing,
++   that is a finding.
 +
 +## What to check
 +
 +- **Determinism.** One writer per market consumes a sequenced input log; the same log gives the same output
 +  byte for byte. No wall-clock reads, unseeded randomness, hash-map iteration order or floating point in
-+  matching decisions.
++  matching decisions. Reference-data changes, halts and reopens enter through the same sequenced log; order
++  ids, trade ids and output timestamps derive from the input sequence.
 +- **Priority.** Price-time priority by sequence number. Amendments follow the documented rules (a price
 +  change or quantity increase loses priority); cancels and fills never reorder other orders.
-+- **Order types and flags.** Limit, market, IOC, FOK, post-only, reduce-only (never increases a position) and
-+  trigger orders behave as documented, each with tests for the edge cases.
++- **Order types and flags.** Limit orders (GTC, IOC, FOK, post-only) and market orders with price protection,
++  sized in base quantity or quote amount, behave as in `SPEC.md` decision 6, each with tests for the edge
++  cases. Milestone 2: reduce-only (never increases a position) and trigger orders; do not require them in
++  Milestone 1 reviews.
 +- **Validation before the book.** Tick size, lot size, minimum notional and price bands are checked before an
 +  order rests or matches; rejections carry a reason code.
 +- **Self-trade prevention.** Applied per the configured mode on every match, market makers included.
 +- **Book invariants.** After every event the book does not cross (best bid below best ask), no order has zero
 +  or negative remaining quantity, and level totals equal the sum of their orders.
-+- **Fills.** Each match yields one maker and one taker fill with fees per tier, and exactly one settlement
-+  event to the ledger, idempotent by trade id.
++- **Fills.** Each match yields one maker and one taker fill with no fee arithmetic in the engine (`trading`
++  computes fees from `reference-data` and books them in the ledger), and exactly one settlement event,
++  idempotent by trade id.
 +- **Market states.** Halt, cancel-only and reopen work and are tested; the kill switch stops matching; restart
 +  rebuilds from snapshot plus log replay and never resumes trading on its own.
 +- **Market data.** Sequence numbers are gap-free; snapshots and incremental updates agree.
 +- **Hot path.** No allocation, locks, syscalls or logging on the match path; the change stays inside p99 under
 +  1 ms from order in to acknowledgement, shown by a benchmark against the baseline.
 +
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
++
 +## Output
 +
 +```markdown
 +## Matching engine review: <change>
 +
-+**Verdict:** APPROVE | REQUEST CHANGES
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 +**Blockers:** N | **Major:** N | **Minor:** N
 +
 +| # | Severity | file:line | Finding | Concrete fix |
@@ -350,7 +495,7 @@
 +- Recommend, do not orchestrate: name other owners or the lead in your report instead of acting as them.
 --- /dev/null
 +++ b/agents/risk-liquidation-owner.md
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,81 @@
 +---
 +name: risk-liquidation-owner
 +description: Module owner of the exchange's risk and liquidation engine - pre-trade checks, margin and leverage tiers, cross and isolated positions, mark-price PnL, liquidation, insurance fund and auto-deleveraging, and per-market kill switches. Read-only. Stage 1 reviewer in /tiered-review whenever a change touches margin, positions or liquidation; every finding has file:line, a severity and a concrete fix.
@@ -371,6 +516,10 @@
 +
 +## What to check
 +
++In Milestone 1 (spot) only these apply: pre-trade checks against the available balance and holds instead of
++margin, open-order limits per market, and the halt and cancel-only switches. Everything else below is
++Milestone 2.
++
 +- **Pre-trade checks.** Available margin, maximum leverage per tier, position limits, open-order limits and
 +  reduce-only run on every order before it reaches the book, market makers included, and are never skipped
 +  to meet the latency budget.
@@ -389,12 +538,27 @@
 +- **Tests.** Property tests that equity never goes negative without a booked shortfall, and replays of
 +  historical crash days for the listed assets.
 +
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
++
 +## Output
 +
 +```markdown
 +## Risk and liquidation review: <change>
 +
-+**Verdict:** APPROVE | REQUEST CHANGES
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 +**Blockers:** N | **Major:** N | **Minor:** N
 +
 +| # | Severity | file:line | Finding | Concrete fix |
@@ -423,7 +587,7 @@
  tools: Read, Grep, Glob
  ---
  
-@@ -18,6 +18,15 @@
+@@ -18,6 +18,16 @@
     duplicate, out of order, concurrent.
  3. Go through every area below. An area that does not apply is left out of the report, not padded.
  
@@ -433,15 +597,45 @@
 +engineer reviews after you. Before reviewing a file, read the skill for its language:
 +`.claude/skills/rust-developer/SKILL.md` (Rust), `.claude/skills/cpp-developer/SKILL.md` (C++),
 +`.claude/skills/frontend-ui-engineering/SKILL.md` (Next.js web) or `.claude/skills/react-native-expo/SKILL.md`
-+(mobile). Money is integer minor units or fixed-scale decimals everywhere: NPR in paisa (scale 2), each
-+crypto asset at its own scale. Binary floating point in a money, price, margin or fee path is a blocker.
++(mobile). Money is integers in the asset's minor units everywhere, wrapped in newtypes with checked arithmetic
++(`SPEC.md`, Rules every module follows): NPR in paisa (scale 2), each crypto asset at its own scale. Decimal
++types such as `rust_decimal` are not used for amounts; decimal strings appear only at the API and display. Binary floating point in a money, price, margin or fee path is a blocker.
 +
  ## What to check
  
  - **Correctness.** Matches the stated intent; off-by-one; inverted or wrong comparison; missing early
+@@ -49,12 +59,27 @@
+   handling on an external call. Fix before merge unless the author justifies it.
+ - **minor**: real but low impact, or a clearly better alternative. The author decides.
+ 
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
++
+ ## Output
+ 
+ ```markdown
+ ## Senior review: <change>
+ 
+-**Verdict:** APPROVE | REQUEST CHANGES
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
+ **Blockers:** N | **Major:** N | **Minor:** N
+ 
+ | # | Severity | file:line | Finding | Concrete fix |
 --- /dev/null
 +++ b/agents/ledger-owner.md
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,79 @@
 +---
 +name: ledger-owner
 +description: Module owner of the exchange's double-entry ledger - journals and postings, balances and holds, trade settlement, fees and rebates, funding and liquidation bookings, NPR and crypto scales, and reconciliation against wallets and banks. Read-only. Stage 1 reviewer in /tiered-review whenever a change touches money movements or balances; every finding has file:line, a severity and a concrete fix.
@@ -462,9 +656,10 @@
 +## What to check
 +
 +- **Every flow is a journal.** Crypto and NPR deposits; withdrawals (hold, then settle or release); trade
-+  settlement between maker, taker and fee accounts; fees and maker rebates; funding payments; realised PnL;
-+  liquidation fees, the insurance fund and auto-deleveraging. No code path changes a balance without
-+  postings.
++  settlement between maker, taker and fee accounts; fees; network fees paid by the house (TRX, ETH, SOL, BTC);
++  and in Milestone 2 maker rebates, funding payments, realised PnL, liquidation fees, the insurance fund and
++  auto-deleveraging. No code path changes a balance without postings, and every account belongs to the chart
++  of accounts in `SPEC-ledger.md`.
 +- **Balanced and immutable.** Postings sum to zero per asset, enforced in the database as well as in code; no
 +  UPDATE or DELETE on postings or journals; corrections are reversing journals.
 +- **Scales.** NPR in paisa (scale 2); each crypto asset at the scale in the asset registry; no binary floating
@@ -473,17 +668,34 @@
 +  reference) under a unique constraint; retries return the existing journal.
 +- **Concurrency.** Balance checks and postings share one transaction with row locks taken in account-id
 +  order, or serialisable isolation; serialisation failures retry with the same idempotency key.
-+- **Reconciliation.** Customer balances per asset are reconciled daily against custodial wallets and NPR bank
-+  accounts. An unexplained difference pauses withdrawals of that asset; the pause is tested.
++- **Reconciliation.** Daily, at a fixed cut-off: each custody wallet and bank asset account in the ledger
++  against its on-chain or bank-statement balance, and customer liabilities plus house accounts against total
++  holdings per asset. An unexplained difference pauses withdrawals of that asset; the pause is tested. A data
++  source that is unavailable is reported as unavailable, never as a match or a mismatch.
 +- **Environments.** Testnet books use test assets and never mix with prod.
 +- **Migrations.** Any schema change on ledger tables is also escalated to the lead.
++
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
 +
 +## Output
 +
 +```markdown
 +## Ledger review: <change>
 +
-+**Verdict:** APPROVE | REQUEST CHANGES
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 +**Blockers:** N | **Major:** N | **Minor:** N
 +
 +| # | Severity | file:line | Finding | Concrete fix |
@@ -505,7 +717,7 @@
 +- Recommend, do not orchestrate: name other owners or the lead in your report instead of acting as them.
 --- /dev/null
 +++ b/agents/quant-owner.md
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,85 @@
 +---
 +name: quant-owner
 +description: Module owner of the exchange's pricing and market-structure code - index and mark price, funding rate, risk and margin parameters, fee and market-maker tiers, and the C++ market-maker FIX gateway. Read-only. Stage 1 reviewer in /tiered-review whenever a change touches pricing, funding, parameters or the market-maker gateway; every finding has file:line, a severity and a concrete fix.
@@ -526,29 +738,52 @@
 +
 +## What to check
 +
++- **Reference rate and liquidity bot (Milestone 1).** The USDT/NPR reference is NRB's published USD/NPR rate
++  as a daily anchor times a live USDT/USD price, and coin references come from configured sources; staleness
++  and minimum-source rules; an admin-set premium and spread; inventory and daily-loss caps for the bot's
++  house account; a kill switch that stays off after a restart; a test that a stale or missing source widens
++  or pulls quotes instead of quoting on an old value.
++- **Market parameters (Milestone 1).** Price and quantity steps, minimum order value, price bands, fees and
++  limits live in `reference-data`, versioned with effective dates, and price step x quantity step is exact
++  in the quote asset's minor units.
 +- **Index price.** Constituent venues and weights from config; outlier rejection, staleness limits and a
 +  minimum number of live sources; resistant to one venue being moved or going stale.
-+- **Mark price.** Derived from the index with the documented premium or basis smoothing and a clamp; used for
++- **Mark price (Milestone 2).** Derived from the index with the documented premium or basis smoothing and a clamp; used for
 +  margin and liquidation, never the last trade price.
-+- **Funding.** The documented formula, interval, caps and floors; zero-sum between longs and shorts;
++- **Funding (Milestone 2).** The documented formula, interval, caps and floors; zero-sum between longs and shorts;
 +  computed deterministically so a replay reproduces it.
 +- **Parameters.** Margin tiers, liquidation thresholds, insurance fund targets, fee and rebate tiers are
 +  versioned config backed by a research log entry with stress tests; rebates never exceed the fees that fund
 +  them.
 +- **Arithmetic.** Fixed-scale or integer arithmetic for anything that becomes money; where research used
 +  floating point, production converts with an explicit rounding rule and a parity test.
-+- **Market-maker gateway (C++).** FIX session sequence numbers, resend and gap handling; cancel-on-disconnect
++- **Market-maker gateway (C++, Milestone 2).** FIX session sequence numbers, resend and gap handling; cancel-on-disconnect
 +  and mass cancel; per-session rate limits; hostile-input parsing with fuzzing; hot-path rules and the
 +  latency budget.
 +- **Manipulation.** How a participant could move the index or mark price, game funding or farm rebates, and
 +  what in the change stops it.
++
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
 +
 +## Output
 +
 +```markdown
 +## Quant review: <change>
 +
-+**Verdict:** APPROVE | REQUEST CHANGES
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 +**Blockers:** N | **Major:** N | **Minor:** N
 +
 +| # | Severity | file:line | Finding | Concrete fix |
@@ -568,9 +803,19 @@
 +  behaviour), minor.
 +- Every finding has file:line and a concrete fix, never "consider improving".
 +- Recommend, do not orchestrate: name other owners or the lead in your report instead of acting as them.
+--- a/agents/code-reviewer.md
++++ b/agents/code-reviewer.md
+@@ -1,6 +1,7 @@
+ ---
+ name: code-reviewer
+ description: Senior code reviewer that evaluates changes across five dimensions — correctness, readability, architecture, security, and performance. Use for thorough code review before merge.
++tools: Read, Grep, Glob
+ ---
+ 
+ # Senior Code Reviewer
 --- /dev/null
 +++ b/agents/npr-payments-owner.md
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,87 @@
 +---
 +name: npr-payments-owner
 +description: Module owner of NPR deposits and withdrawals to Nepali bank accounts - the payout interface and provider adapters, the payout state machine, idempotent provider calls, own-account checks, limits, callbacks, and reconciliation with bank statements. Read-only. Stage 1 reviewer in /tiered-review whenever a change touches NPR money movement; every finding has file:line, a severity and a concrete fix.
@@ -607,17 +852,39 @@
 +  files or callbacks.
 +- **Callbacks and files.** Signatures verified, replays rejected, payloads treated as untrusted; dates
 +  converted explicitly (including Bikram Sambat if a provider uses it) and tested.
++- **Deposits.** Statement import keeps a cursor and dedups on the bank transaction id. A deposit is matched by
++  reference code, then by the sender account linked at KYC; unmatched or third-party-sender deposits go to
++  suspense and are returned to the source account, never credited; cash and cheque deposits are refused by
++  policy; crediting is one idempotent ledger posting per bank transaction.
 +- **Reconciliation.** Daily against bank statements or settlement files; unmatched items go to suspense with
 +  an owner; an unexplained difference pauses NPR withdrawals.
-+- **Operations.** Cut-off times and bank holidays handled; provider credentials come from the secret store,
-+  never from code or logs.
++- **Operations.** Saturday is the only weekend day; bank holidays come from an admin-maintained Bikram Sambat
++  table with effective dates, never a constant; each rail has its own cut-off time and per-transaction cap in
++  config, and payouts above a cap are split or routed to another rail by rule; provider credentials come from
++  the secret store, never from code or logs. A change to the bank simulator keeps every behaviour above; a
++  simulator that drops a cut-off, a cap or the dedup is a finding.
++
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
 +
 +## Output
 +
 +```markdown
 +## NPR payments review: <change>
 +
-+**Verdict:** APPROVE | REQUEST CHANGES
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 +**Blockers:** N | **Major:** N | **Minor:** N
 +
 +| # | Severity | file:line | Finding | Concrete fix |
@@ -638,7 +905,7 @@
 +- Recommend, do not orchestrate: name other owners or the lead in your report instead of acting as them.
 --- /dev/null
 +++ b/agents/compliance-owner.md
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,83 @@
 +---
 +name: compliance-owner
 +description: Module owner of the exchange's compliance controls - KYC tiers for retail, KYB for institutions and market makers, sanctions and PEP screening, transaction monitoring and cases, travel rule, personal-data handling and retention, and tamper-evident audit logs. Read-only. Stage 1 reviewer in /tiered-review whenever a change touches onboarding, screening, monitoring or personal data; every finding has file:line, a severity and a concrete fix.
@@ -660,14 +927,14 @@
 +
 +## What to check
 +
-+- **Tiers and KYB.** Retail KYC tiers and institutional KYB (corporate documents, ultimate beneficial owners,
-+  authorised traders) as state machines; limits enforced at the action on the server.
++- **Tiers and KYB.** Retail KYC tiers (and in Milestone 2 institutional KYB: corporate documents, ultimate
++  beneficial owners, authorised traders) as state machines; limits enforced at the action on the server.
 +- **Screening.** At onboarding, on identity changes, on new counterparties or bank accounts, before
 +  withdrawals and payouts, and on list updates; potential matches go to review; an unavailable provider holds
 +  the action.
 +- **Monitoring.** Rules are versioned and backtested; alerts open cases with an assignee and a recorded
 +  decision; nothing in the product tips off the customer.
-+- **Travel rule.** Originator and beneficiary data for transfers with other providers above the configured
++- **Travel rule (Milestone 2).** Originator and beneficiary data for transfers with other providers above the configured
 +  threshold; self-hosted wallet handling per policy; missing data holds the transfer.
 +- **Configuration, not code.** Nepal's rules are not defined yet. Every threshold, limit, list, retention
 +  period and jurisdiction rule comes from versioned config with an owner; a hard-coded value is a finding.
@@ -676,14 +943,33 @@
 +  from config with a legal-hold override.
 +- **Audit logs.** Append-only or hash-chained, covering every automated and manual decision with the rule
 +  version; tamper checks scheduled.
-+- **Environments.** Dev and testnet use synthetic identities only; no real documents outside prod.
++- **Environments.** Dev and testnet use synthetic identities only: the KYC, bank and screening provider
++  interfaces bind to the project's simulators outside prod, and fixtures and seed data come from the
++  simulators. A code path that accepts a real document, selfie or bank account number outside prod is a
++  blocker. Real contact data (email, phone) is the only real personal data outside prod, and it is
++  minimised and deletable.
++
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
 +
 +## Output
 +
 +```markdown
 +## Compliance review: <change>
 +
-+**Verdict:** APPROVE | REQUEST CHANGES
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 +**Blockers:** N | **Major:** N | **Minor:** N
 +
 +| # | Severity | file:line | Finding | Concrete fix |
@@ -705,7 +991,7 @@
 +- Recommend, do not orchestrate: name other owners or the lead in your report instead of acting as them.
 --- /dev/null
 +++ b/agents/custody-blockchain-owner.md
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,84 @@
 +---
 +name: custody-blockchain-owner
 +description: Module owner of the exchange's custody and chain integrations - hot, warm and cold wallets, the signing service and withdrawal policy, deposit detection, confirmations and reorgs, nonces and fees, token listings and decimals, and custody contracts. Read-only. Stage 1 reviewer in /tiered-review whenever a change touches wallets, keys, crypto deposits or withdrawals, or contracts; every finding has file:line, a severity and a concrete fix.
@@ -729,7 +1015,9 @@
 +## What to check
 +
 +- **Keys.** Private keys and seeds never reach application servers, code, config, environment variables,
-+  logs or crash dumps; application servers hold extended public keys only.
++  logs or crash dumps; application servers hold no private keys. Deposit addresses come from xpub derivation
++  (BTC, EVM, Tron) or from address pools pre-generated by the signing service (Solana, whose ed25519 keys
++  cannot be derived from an xpub).
 +- **Withdrawal policy.** Limits, velocity, destination allow-lists with a cooling-off period, M-of-N approval
 +  by distinct people and screening are enforced in the signing path, not only in the API or UI.
 +- **Withdrawal state machine.** Persisted states before each side effect; a retried broadcast reuses the same
@@ -742,15 +1030,34 @@
 +- **Hot wallet.** Balance capped; sweeps and refills need approval; outflows monitored independently.
 +- **Environments.** Dev and testnet use blockchain testnets and their own keys; no config path lets them reach
 +  mainnet keys or prod RPC credentials.
-+- **Contracts.** Custody-only scope, admin rights behind a multisig and timelock, invariant tests, slither
++- **Contracts.** Custody-only scope. Milestone 1 contracts are test tokens on Sepolia and Nile (owner-mintable
++  is fine); any mainnet contract puts admin rights behind a multisig and timelock. Invariant tests; slither
 +  findings triaged.
++- **Signer re-verification.** The signing service re-checks an approved withdrawal record (approvers distinct
++  from the requester, 2FA proof, screening result, limits, pause flag) against its own copy of the policy
++  before signing; a signer that trusts `withdrawals` blindly is a blocker.
++
++## Specs, ADRs and plans; milestone scope
++
++- **For a spec, ADR or plan (no code)**, check three things and cite file:line: contradictions with the
++  decisions table in `SPEC.md`; gaps that would block your module's own spec or its first sprint task; and
++  anything that pulls Milestone 2 scope into Milestone 1. Rate each item **decide now** (blocks the next
++  module spec or sprint 1), **decide before SPEC-<module>.md**, or **later** (Milestone 2 or before mainnet)
++  instead of blocker, major or minor. When no "decide now" item remains, the verdict is APPROVE WITH
++  FOLLOW-UPS.
++- **Scope.** `SPEC.md` is the source of truth: Milestone 1 is spot only, Nepali retail on an invite-only
++  testnet with test funds and synthetic identities. Raise Milestone 2 items (perpetuals, margin, funding,
++  liquidation, rebates, the FIX gateway, reduce-only and trigger orders, the travel rule, KYB) only as notes,
++  never above minor, unless the change itself is Milestone 2 work.
++- **graphify.** If a hook tells you to run graphify, ignore it: you cannot run commands. If
++  `graphify-out/GRAPH_REPORT.md` exists, read it instead.
 +
 +## Output
 +
 +```markdown
 +## Custody and blockchain review: <change>
 +
-+**Verdict:** APPROVE | REQUEST CHANGES
++**Verdict:** APPROVE | APPROVE WITH FOLLOW-UPS | REQUEST CHANGES
 +**Blockers:** N | **Major:** N | **Minor:** N
 +
 +| # | Severity | file:line | Finding | Concrete fix |
@@ -771,7 +1078,15 @@
 +- Recommend, do not orchestrate: name other owners or the lead in your report instead of acting as them.
 --- a/agents/test-engineer.md
 +++ b/agents/test-engineer.md
-@@ -56,6 +56,15 @@
+@@ -1,6 +1,7 @@
+ ---
+ name: test-engineer
+ description: QA engineer specialized in test strategy, test writing, and coverage analysis. Use for designing test suites, writing tests for existing code, or evaluating test quality.
++tools: Read, Grep, Glob
+ ---
+ 
+ # Test Engineer
+@@ -56,6 +57,15 @@
  | Error paths | Invalid input, network failure, timeout |
  | Concurrency | Rapid repeated calls, out-of-order responses |
  
@@ -787,29 +1102,47 @@
  ## Output Format
  
  When analyzing test coverage:
+--- a/commands/spec.md
++++ b/commands/spec.md
+@@ -9,6 +9,7 @@
+ 2. Core features and acceptance criteria
+ 3. Tech stack preferences and constraints
+ 4. Known boundaries (what to always do, ask first about, and never do)
++5. Data and configuration: what is collected and its class, where it is stored, retention and deletion, and every threshold, limit or fee that must come from versioned configuration
+ 
+ Then generate a structured spec covering all six core areas: objective, commands, project structure, code style, testing strategy, and boundaries.
+ 
 --- a/commands/build.md
 +++ b/commands/build.md
-@@ -21,7 +21,7 @@
+@@ -21,8 +21,8 @@
  4. Implement the minimum code to pass the test (GREEN)
  5. Run the full test suite to check for regressions
  6. Run the build to verify compilation
 -7. Commit with a descriptive message
-+7. Commit on the task's feature branch (`feat/<ticket>-<short-name>`, never `main`) with a Conventional Commits message
- 8. Mark the task complete and stop
+-8. Mark the task complete and stop
++7. Commit on the task branch with a Conventional Commits message. The task branch is `feat/<ticket>-<short-name>`, created from `origin/main` (`git fetch origin && git checkout -B feat/<ticket>-<short-name> origin/main`). In a Claude cloud session that can only push its assigned branch, reset that branch to `origin/main` first and use it. Never commit to `main`, and never put a second task on a branch whose PR is still open.
++8. Push the branch and open a PR titled `<ticket>: <task title>` whose body lists the acceptance criteria and the tests added. Run `/tiered-review` (it posts its verdicts on the PR), mark the task complete in `tasks/todo.md`, and stop for the user. The user approves and merges; the next task starts from the updated `origin/main`.
  
  ## Autonomous: the whole plan (`/build auto`)
-@@ -36,7 +36,7 @@
+ 
+@@ -32,11 +32,12 @@
+ 2. **Establish a clean baseline.** Run `git status --porcelain`. If there are uncommitted changes outside the expected planning artifacts (`SPEC.md`, `docs/SPEC.md`, `spec/*`, `tasks/plan.md`, `tasks/todo.md`), stop and ask the user to commit, stash, or confirm how to handle them. Autonomous per-task commits must not absorb unrelated local work, or the clean-rollback guarantee breaks.
+ 3. **Plan if needed.** If there is no `tasks/plan.md`, invoke planning-and-task-breakdown to generate one.
+ 4. **Single checkpoint.** Present the full plan and wait for an unambiguous affirmative (e.g. "approve", "go", "yes"). Treat hedged responses ("looks reasonable", "I guess") as **not** approved. This is the only human gate — after approval, run autonomously. If you generated `tasks/plan.md`, commit it as a single preparatory commit now so it doesn't bleed into the first task's commit.
+-5. **Execute every task in dependency order.** Use each task's declared dependencies; if they aren't explicit, execute in the order the plan lists them. For each task, run the full default loop above (RED → GREEN → regression → build → commit → mark complete). Stage only the files that task touched plus its task-status update — never `git add -A` blindly — and make one commit per task so any point is a clean rollback.
++5. **In this project, auto mode stops at the PR boundary.** It implements the tasks of one PR only (normally one task), opens that PR, runs `/tiered-review` and stops until the PR is merged. It never continues to the next task on the same branch. Then, for those tasks:
++   **Execute in dependency order.** Use each task's declared dependencies; if they aren't explicit, execute in the order the plan lists them. For each task, run the full default loop above (RED → GREEN → regression → build → commit → mark complete). Stage only the files that task touched plus its task-status update — never `git add -A` blindly — and make one commit per task so any point is a clean rollback.
  6. **Stop and ask the user** (do not push through) when:
     - a test can't be made to pass or the build breaks without an obvious fix → follow debugging-and-error-recovery
     - the spec is ambiguous, or a task needs a decision the spec doesn't cover
 -   - a task is high-risk or irreversible — auth/permission changes, destructive data migrations, payments, deletions, deploys, anything touching secrets, **or anything you can't undo with `git revert`** → follow doubt-driven-development and get explicit sign-off before continuing
-+   - a task is high-risk or irreversible — auth/permission changes, destructive data migrations, payments, deletions, deploys, anything touching secrets, **or anything you can't undo with `git revert`** → follow doubt-driven-development and get explicit sign-off before continuing. In this project that always includes the ledger, matching, margin and liquidation, custody and signing, crypto and NPR withdrawals, and KYC/AML rules
++   - a task is high-risk or irreversible — auth/permission changes, destructive data migrations, payments, deletions, deploys, anything touching secrets, **or anything you can't undo with `git revert`** → follow doubt-driven-development and get explicit sign-off before continuing. In this project that always includes the ledger, matching, margin and liquidation, custody and signing, crypto and NPR withdrawals, KYC/AML rules, CI workflows and required checks, the `main` branch protection, `deny.toml` and the secret-scanning config
  
     After the user resolves a blocker, they re-invoke `/build auto` — it resumes from the next pending task.
  7. **Summarize at the end:** tasks completed, tests added, commits made, and anything skipped, flagged, or left for the user.
 --- a/commands/tiered-review.md
 +++ b/commands/tiered-review.md
-@@ -1,10 +1,10 @@
+@@ -1,54 +1,123 @@
  ---
 -description: Tiered code review - picks the mid-level, senior or lead reviewer from what the diff touches, runs that read-only agent, and follows its escalations. Separate from /review, the single-pass five-axis review.
 +description: Two-stage review before merge - stage 1 runs senior-engineer and every module owner the diff touches, stage 2 runs lead-engineer on every PR, then lists the merge gate (CI green, both stages approved, the user approves). --tier runs a single agent as a quick check, not a merge review. Separate from /review, the single-pass five-axis review.
@@ -818,36 +1151,37 @@
  
 -Review the current change with the reviewer tier it needs. You orchestrate; the reviewers are the
 -mid-level-engineer, senior-engineer and lead-engineer agents. They are read-only and cannot run git, so you
+-collect the change and hand it to them.
 +Review the current change the way this project merges it: two stages of read-only reviewers, then the
 +user approves. You orchestrate; the reviewers are agents that are read-only and cannot run git, so you
- collect the change and hand it to them.
++collect the change and hand it to them. Every PR goes through this gate, docs, specs, ADRs and plans
++included.
  
  ## 1. Collect the change
-@@ -17,38 +17,50 @@
- - Collect the stated intent: the PR description if you have it, and `git log --format=%B <base>..HEAD`.
+ 
+-- Base: the `base-ref` argument if given. Otherwise the merge base with the default branch
+-  (`git merge-base HEAD origin/HEAD`, falling back to `main`, then `master`). If HEAD has no commits beyond
+-  that base, review the working tree (staged and unstaged) instead.
+-- Run `git diff --stat <base>...HEAD` and `git diff <base>...HEAD` (for the working tree:
+-  `git diff --stat HEAD` and `git diff HEAD`). Read any untracked files that `git status --porcelain` lists.
+-- Collect the stated intent: the PR description if you have it, and `git log --format=%B <base>..HEAD`.
++- Base, in this order: the `base-ref` argument if given; else the PR's base commit if a PR exists
++  (`gh pr view --json baseRefOid -q .baseRefOid`); else `git fetch origin` then
++  `git merge-base HEAD origin/main`; else `origin/master`, then local `main` or `master`. Never use a local
++  `main` without fetching first: it can be stale.
++- Print the base you chose and `git diff --stat <base>...HEAD`. If more than 30 files changed, stop and ask
++  the user to confirm the base before running any agent. If HEAD has no commits beyond the base, review
++  the working tree instead (`git diff --stat HEAD`, `git diff HEAD`, and every untracked file that
++  `git status --porcelain` lists).
++- Collect the stated intent: the PR description if there is one, and `git log --format=%B <base>..HEAD`.
++- If `graphify-out/graph.json` exists, run `graphify query "<one-line summary of the change>"` and add its
++  output to every agent's brief. The agents cannot run graphify themselves.
  - If there is no change, say so and stop.
  
--## 2. Pick the tier
-+## 2. Stage 1: senior engineer and module owners
+ ## 2. Pick the tier
  
 -The highest tier that matches wins. Quote the paths or diff lines that decided it.
-+Always run **senior-engineer**. Also run every module owner whose area the diff touches, by path or by
-+content; quote the paths or diff lines that matched. The paths are the planned layout; update this table
-+when the code exists.
-+
-+| Owner agent | Paths | Or the diff touches |
-+|---|---|---|
-+| matching-engine-owner | `engine/matching/` | order book, order types, matching, self-trade prevention, sequencing, market states |
-+| risk-liquidation-owner | `engine/risk/`, `engine/liquidation/` | margin, leverage, positions, pre-trade checks, liquidation, insurance fund, auto-deleveraging |
-+| ledger-owner | `services/ledger/` | journals, postings, balances, holds, fees, rebates, funding payments, settlement, ledger migrations |
-+| custody-blockchain-owner | `services/custody/`, `services/chains/`, `contracts/` | wallets, addresses, crypto deposits and withdrawals, signing, nonces, confirmations, token listings |
-+| quant-owner | `engine/pricing/`, `mm-gateway/` | index or mark price, funding rate, risk parameters, fee and market-maker tiers, the FIX gateway |
-+| npr-payments-owner | `services/payments/` | NPR deposits and payouts, bank or payment-network adapters, fiat reconciliation |
-+| compliance-owner | `services/compliance/` | KYC, KYB, screening, sanctions, transaction monitoring, travel rule, personal data, audit logs |
-+
-+Run the stage 1 agents in parallel. Give each one the diff (for a diff too large to pass, the `--stat`
-+output, the list of changed files and the base ref, so it can read them), the stated intent, and why it
-+was picked.
++The user approved these tiers on 2026-10-30. Say which tier ran in the report and in the PR record.
  
 -- **lead**: a new service, package or deployable (new Dockerfile, service directory, entry point or deploy
 -  job); schema changes (migrations, DDL, ORM model fields, indexes); public API changes (OpenAPI, `.proto`,
@@ -860,36 +1194,17 @@
 -  deserialisation, SQL or shell built from input).
 -- **mid-level** (default): everything else - tests, docs, renames, small refactors, configuration tweaks,
 -  dependency bumps without code changes.
-+## 3. Stage 2: lead engineer
- 
+-
 -`--tier` overrides the pick; say that it was overridden. Announce the tier, the reason and the files that
 -triggered it before running the reviewer.
-+Always run **lead-engineer** last, with the diff, the stated intent and every stage 1 report. It reviews
-+the change against the whole codebase and rules on what stage 1 escalated.
- 
+-
 -## 3. Run the reviewer
-+## 4. Follow escalations
- 
+-
 -Start the chosen agent with: the diff (for a diff too large to pass, the `--stat` output, the list of changed
 -files and the base ref, so it can read them), the stated intent, and the reason for the tier.
-+If a report names an owner that did not run, run that owner on the named areas and pass the escalation
-+lines, before stage 2 when you can. Run each agent at most once.
- 
+-
 -## 4. Follow escalations
-+## 5. Report and merge gate
-+
-+Return each report as written, under a heading that names the agent, then one combined verdict: the
-+strictest verdict of any agent that ran. End with the merge gate:
-+
-+- [ ] CI is green on the PR head: unit, integration, build and security jobs
-+- [ ] Stage 1 approved: senior-engineer and every owner that ran
-+- [ ] Stage 2 approved: lead-engineer
-+- [ ] The user approved the PR. Squash-merge only after that, or when the user explicitly tells you to merge.
-+
-+Do not change code here; fixes are a separate step the user asks for.
-+
-+## `--tier`
- 
+-
 -If the mid-level report lists Escalations, run the named tier on just those areas and pass the escalation
 -lines. If the senior report has items under "Escalate to lead", run the lead tier on them. Run each tier at
 -most once.
@@ -899,6 +1214,97 @@
 -Return each reviewer's report as written, under a heading that names the tier, then one combined verdict:
 -the strictest verdict of any tier that ran. Do not change code here; fixes are a separate step the user asks
 -for.
++- **Full gate**: the PR changes `SPEC.md`, any `SPEC-*.md`, `docs/adr/`, `docs/threat-model.md` or `tasks/`, or
++  touches money code:
++  `services/ledger/`, `engine/matching/`, `services/trading/`, `services/custody/`, `contracts/`,
++  `services/npr-payments/`, `services/withdrawals/` or `services/reconciliation/`. Stage 1 runs
++  senior-engineer and every owner the table below matches by path or by content.
++- **Module tier**: any other PR. Stage 1 runs senior-engineer and the owners the task names under "Owner
++  module" in `tasks/todo.md` (none for "Owner module: none"), plus any owner the table matches by path.
++
++Stage 2 (lead-engineer) runs in both tiers.
++
++## 3. Stage 1: senior engineer and module owners
++
++Always run **senior-engineer**. Run the owners the tier calls for; quote the paths or diff lines that
++matched. The capability map in `SPEC.md` is the source of truth: when this table and `SPEC.md` disagree,
++run the owners `SPEC.md` names, and fix this table in the same PR.
++
++| Module (`SPEC.md`) | Paths | Owner agents | Or the diff touches |
++|---|---|---|---|
++| platform | `crates/`, `services/skeleton/`, `infra/`, `.github/`, `Makefile` | none (senior only) | CI gates, pinning, the local stack |
++| audit-log | `services/audit-log/` | compliance-owner | audit records, hash chain, retention |
++| reference-data | `services/reference-data/` | quant-owner | assets, markets, steps, bands, fees, limits, thresholds |
++| identity | `services/identity/` | compliance-owner (lead-engineer applies its API and identity checklist at stage 2) | sign-up, login, 2FA, sessions, API keys, the 24-hour lock |
++| ledger | `services/ledger/` | ledger-owner | journals, postings, balances, holds, fees, chart of accounts, ledger migrations |
++| compliance | `services/compliance/` | compliance-owner | KYC levels, screening, limits per level, tax hook, personal data |
++| matching | `engine/matching/` | matching-engine-owner | order book, order types, self-trade prevention, sequencing, halts, replay |
++| trading | `services/trading/` | matching-engine-owner, ledger-owner, risk-liquidation-owner | order intake, pre-trade checks, holds, trade and fee booking |
++| market-data | `services/market-data/` | matching-engine-owner | book snapshots and deltas, trades, tickers, candles, sequence numbers |
++| custody | `services/custody/`, `contracts/` | custody-blockchain-owner | wallets, addresses, deposits, signing, nonces, confirmations, sweeps |
++| npr-payments | `services/npr-payments/` | npr-payments-owner | NPR deposits and payouts, the bank simulator, statement import |
++| withdrawals | `services/withdrawals/` | custody-blockchain-owner, npr-payments-owner, compliance-owner, ledger-owner | approval tiers, 2FA, limits, screening, the pause switch |
++| reconciliation | `services/reconciliation/` | ledger-owner, custody-blockchain-owner, npr-payments-owner | daily reconciliation, mismatches, the automatic pause |
++| api-gateway | `services/api-gateway/` | none (lead-engineer applies its API checklist at stage 2) | public REST and WebSocket API, admin API, auth, rate limits |
++| liquidity-bot | `services/liquidity-bot/` | quant-owner | reference rate, quoting, inventory and loss caps |
++| web-app | `web/apps/web/` | none (lead-engineer applies its scope checklist at stage 2) | retail screens, i18n, Bikram Sambat dates |
++| admin | `web/apps/admin/` | compliance-owner, ledger-owner | KYC review, withdrawal approvals, halts, fee and limit settings |
++| threat model | `docs/threat-model.md` | security-auditor, custody-blockchain-owner | trust boundaries, attackers, controls, residual risk |
++| Milestone 2 | `engine/risk/`, `engine/liquidation/`, `engine/pricing/`, `mm-gateway/` | risk-liquidation-owner, quant-owner | margin, liquidation, index and mark price, funding, the FIX gateway |
++
++Specs, ADRs and plans are reviewed by the owners whose topics they name, using the same table.
++
++Run the stage 1 agents in parallel. Give each one: the diff (for a diff too large to pass, the `--stat`
++output, the list of changed files and the base ref, so it can read them), the stated intent, why it was
++picked, the graphify output if any, and, for a spec, ADR or plan, this brief:
++
++> This is a Milestone 1 document (spot only, test funds, synthetic identities), to be judged against
++> `SPEC.md` and `SPEC-platform.md`, not as code. Check (1) contradictions with the decisions table in
++> `SPEC.md`, (2) gaps that would block your module's own spec or its first sprint task, (3) anything that
++> pulls Milestone 2 scope into Milestone 1. Cite file:line. Rate each item "decide now", "decide before
++> SPEC-<module>.md" or "later", as your agent file's "Specs, ADRs and plans" section says.
++
++## 4. Stage 2: lead engineer
++
++Always run **lead-engineer** last, with the diff, the stated intent, the brief above when it applies and
++every stage 1 report. It reviews the change against the whole codebase and rules on what stage 1
++escalated.
++
++## 5. Follow escalations
++
++If a report names an owner that did not run, run that owner on the named areas and pass the escalation
++lines, before stage 2 when you can. Run each agent at most once.
++
++## 6. Report
++
++- Save each agent's raw report to a file outside the repository (the session's scratchpad, or `/tmp`),
++  named `<agent>.md`, and give the paths. Do not paste the raw reports into the reply.
++- Return one de-duplicated list. For code, group it by severity. For specs, ADRs and plans, group it as
++  "decide now", "decide before SPEC-<module>.md" and "later", and put first the decisions only the user can
++  make (scope, cost, product).
++- Give the combined verdict. For code it is the strictest verdict of any agent that ran. For a spec, ADR or
++  plan it depends only on "decide now" items: none left means APPROVE WITH FOLLOW-UPS.
++
++## 7. Record and merge gate
++
++- Post one comment on the PR (`gh api repos/{owner}/{repo}/issues/{n}/comments`) with one line per agent:
++  agent, tier, verdict, blocking items. Add the session link.
++- Before a merge, post a second comment quoting the user's approval message word for word, with its time.
++  The user merges in GitHub, or the agent merges only when the user says so in that session.
++
++End the report with the merge gate:
++
++- [ ] CI is green on the PR head: `rust-lint`, `rust-test`, `integration`, `ts`, `build` and `security`
++  (once they exist; until then, say there is no CI)
++- [ ] Stage 1 approved: senior-engineer and every owner that ran
++- [ ] Stage 2 approved: lead-engineer
++- [ ] The verdicts and the user's approval are posted on the PR
++- [ ] The user approved the PR. Squash-merge only after that, or when the user explicitly tells you to merge.
++
++Do not change code here; fixes are a separate step the user asks for.
++
++## `--tier`
++
 +`--tier mid` runs only mid-level-engineer, as a quick check before a PR is opened. `--tier senior` or
 +`--tier lead` runs only that agent. None of these is a merge review; say which one ran and that the merge
 +gate still needs the full two stages.

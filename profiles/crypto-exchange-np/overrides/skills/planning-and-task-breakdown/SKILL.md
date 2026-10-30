@@ -116,7 +116,7 @@ Arrange tasks so that:
 3. Verification checkpoints occur after every 2-3 tasks
 4. High-risk tasks are early (fail fast)
 
-In this project work runs in sprints: group the ordered tasks into sprints of the length the user sets, and end each sprint with a checkpoint that runs on dev.
+In this project work runs in sprints: group the ordered tasks into sprints of the length the user sets, and end each sprint with a checkpoint that runs on dev once dev exists (`SPEC-platform.md` Part B); until then, the checkpoint is CI green on `main` and `make ci` on a fresh clone.
 
 Add explicit checkpoints to the task list target:
 
