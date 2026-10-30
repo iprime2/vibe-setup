@@ -148,7 +148,7 @@ for p in $ALL_PACKS; do
   if [ "$added" = "$(expected_items "$p")" ] && [ -z "$removed" ]; then
     ok "--pack $p adds exactly its $(expected_items "$p" | wc -l | tr -d ' ') items and removes nothing"
   else
-    bad "--pack $p: added [$(echo $added)], removed [$(echo $removed)], wanted [$(echo $(expected_items "$p"))]"
+    bad "--pack $p: added [$(echo $added)], removed [$(echo $removed)], wanted [$(expected_items "$p" | xargs)]"
   fi
 done
 
@@ -217,7 +217,10 @@ check "round trip: overrides identical" diff -r "$L/overrides" "$R/profiles/with
 
 echo "== re-running without the packs warns about the files left behind"
 cd "$W/p1" || exit 2
+# p1 carries the two tweaks saved above, so a plain re-run stops before overwriting them; --force overrides that.
 capture bash "$REPO/bootstrap.sh" --scope project
+expect_rc "a re-run that would overwrite the saved tweaks exits 1" 1
+capture bash "$REPO/bootstrap.sh" --scope project --force
 expect_rc "re-run without packs exits 0" 0
 expect_out "a warning names a dropped pack" "WARN: pack 'roles' was installed here before"
 check "the packs record is removed" test ! -e "$P/.vibe-setup/packs"

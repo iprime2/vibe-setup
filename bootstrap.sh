@@ -2,7 +2,7 @@
 # Install the vibe-coding toolkit (Graphify, Ponytail, Agent Skills, and optional packs) from the
 # pinned, allow-listed sources in sources.lock. Idempotent. Never commits, never reads secrets.
 #
-#   bash bootstrap.sh [--scope user|project] [--pack NAME[,NAME]] [--profile NAME] [--with-rules] [--dry-run]
+#   bash bootstrap.sh [--scope user|project] [--pack NAME[,NAME]] [--profile NAME] [--with-rules] [--force] [--dry-run]
 #
 # --scope user      (default) install into ~/.claude; keeps project repos clean
 # --scope project   install into ./.claude of the current directory; also keeps a pristine
@@ -11,8 +11,10 @@
 #                   Without it, only the base toolkit is installed.
 # --profile NAME    after installing, apply profiles/NAME (tailored skills for one product).
 #                   Needs --scope project: user-level copies of the same skills could shadow it.
-#                   The packs the profile was saved with are installed as well.
+#                   The packs the profile was saved with are installed as well. At project scope the profile's
+#                   PROJECT.md also goes into ./AGENTS.md, which other coding agents (Cursor) read.
 # --with-rules      also append rules/CLAUDE.md to <scope>/.claude/CLAUDE.md (between markers)
+# --force           at project scope, re-install even when it would overwrite tailoring that no profile holds
 # --dry-run         print every command, change nothing
 #
 # Every pinned source is fetched and checked before anything is installed, so a pin mismatch
@@ -25,8 +27,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=packs.conf
 . "$HERE/packs.conf"
 
-SCOPE=user DRY=0 RULES=0 PROFILE="" PACK_ARGS=""
-usage() { echo "usage: bootstrap.sh [--scope user|project] [--pack NAME[,NAME]] [--profile NAME] [--with-rules] [--dry-run]"; }
+SCOPE=user DRY=0 RULES=0 FORCE=0 PROFILE="" PACK_ARGS=""
+usage() { echo "usage: bootstrap.sh [--scope user|project] [--pack NAME[,NAME]] [--profile NAME] [--with-rules] [--force] [--dry-run]"; }
 need_value() { [ "$1" -ge 2 ] || { usage >&2; exit 2; }; }
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -34,6 +36,7 @@ while [ $# -gt 0 ]; do
     --pack) need_value $#; PACK_ARGS="${PACK_ARGS:+$PACK_ARGS,}$2"; shift 2 ;;
     --profile) need_value $#; PROFILE="$2"; shift 2 ;;
     --with-rules) RULES=1; shift ;;
+    --force) FORCE=1; shift ;;
     --dry-run) DRY=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
@@ -121,6 +124,21 @@ if [ -n "$PROFILE" ]; then
   if [ -n "${PROFILE_PACKS:-}" ]; then
     echo "profile '$PROFILE' was saved with packs: $PROFILE_PACKS (installing them too)"
     PACK_ARGS="${PACK_ARGS:+$PACK_ARGS,}${PROFILE_PACKS// /,}"
+  fi
+fi
+
+# A project-scope re-run replaces every installed skill, command and agent. Stop before anything changes if
+# that would overwrite tailoring: a file that differs from the pristine snapshot and is not exactly what the
+# profile being applied puts back. Save it first (scripts/profile_save.sh NAME) or pass --force.
+if [ "$SCOPE" = project ] && [ -d "$CLAUDE_DIR/.vibe-setup/pristine" ]; then
+  drift="$(python3 -I "$HERE/scripts/tailoring_drift.py" "$CLAUDE_DIR" "${pdir:-}")"
+  if [ -n "$drift" ]; then
+    if [ "$FORCE" = 1 ]; then
+      echo "WARN: --force: overwriting tailoring in $CLAUDE_DIR:"; printf '%s\n' "$drift" | sed 's/^/  /'
+    else
+      printf '%s\n' "$drift" | sed 's/^/  /' >&2
+      die "tailoring in $CLAUDE_DIR would be lost (listed above); save it with scripts/profile_save.sh NAME, or re-run with --force"
+    fi
   fi
 fi
 
@@ -228,7 +246,7 @@ fi
 echo "== graphify ($GRAPHIFY_SPEC)"
 if [ "$(id -u)" = 0 ]; then export UV_TOOL_BIN_DIR="${UV_TOOL_BIN_DIR:-/usr/local/bin}"; fi
 export PATH="${UV_TOOL_BIN_DIR:-$HOME/.local/bin}:$PATH"
-run uv tool install "$GRAPHIFY_SPEC"
+run uv tool install "$GRAPHIFY_SPEC" --exclude-newer "$GRAPHIFY_EXCLUDE_NEWER"
 # graphify rewrites its CLAUDE.md section down to the next "# " heading, which cut off a vibe-setup begin
 # marker sitting below it (older runs put blocks there); move this repo's blocks above it first.
 if [ -f "$CLAUDE_DIR/CLAUDE.md" ]; then run python3 -I "$HERE/scripts/append_block.py" "$CLAUDE_DIR/CLAUDE.md"; fi
@@ -312,6 +330,7 @@ if [ -n "$PROFILE" ]; then
   fi
   if [ -f "$pdir/PROJECT.md" ]; then
     run python3 -I "$HERE/scripts/append_block.py" "$CLAUDE_DIR/CLAUDE.md" "$pdir/PROJECT.md" "profile:$PROFILE"
+    run python3 -I "$HERE/scripts/append_block.py" "$PWD/AGENTS.md" "$pdir/PROJECT.md" "profile:$PROFILE"
   fi
 fi
 

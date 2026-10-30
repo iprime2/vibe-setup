@@ -23,7 +23,11 @@ fetched at install time under theirs, and the tailored copies in `profiles/` car
   bash ~/vibe-setup/bootstrap.sh --pack roles,quant   # optional packs, see "Packs"
   ```
 
-Cloud containers are ephemeral, so run the setup again in every new cloud session.
+Cloud containers are ephemeral. With user scope, run the setup again in every new cloud session. In a project
+that commits its `.claude/` (project scope), a new session needs only `bash ~/vibe-setup/session-start.sh
+[PROFILE]` from the project root: it installs graphify's pinned command-line tool for the committed hooks and
+reports any drift, and changes nothing under `.claude/`. Run `bootstrap.sh` there only to refresh the toolkit;
+it stops before overwriting tailoring that no profile holds (`--force` overrides that).
 
 **Permission prompts.** In a cloud session on the auto permission mode, the harness may refuse to run scripts
 from the cloned repo ("Code from External"). In two fresh sessions on 2026-10-26 the agent stopped at the first
@@ -75,6 +79,9 @@ The role agents are read-only (`tools: Read, Grep, Glob`). `/tiered-review` pick
 (mid-level by default; senior for logic, concurrency, money or security; lead for new services, schemas,
 APIs and cross-service contracts), runs that agent, and follows its escalations. It does not replace `/review`.
 Everything here is generic: product-, employer- and country-specific rules belong in a profile.
+Agent Skills' own agents (`code-reviewer`, `security-auditor`, `test-engineer`, `web-performance-auditor`)
+inherit every tool unless a profile adds a `tools:` line; the crypto-exchange-np profile limits them to Read,
+Grep and Glob.
 
 Where a third-party skill in a pack is looser than the skill written here, the skill written here says so and
 wins: `blockchain-developer` refuses a token whose `decimals()` call fails (`evm-token-decimals` falls back to
@@ -167,7 +174,8 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 |---|---|
 | `LICENSE` | MIT licence for this repo's own files |
 | `SETUP_PROMPT.md` | The prompt to paste into a new session |
-| `bootstrap.sh` | Installer: `--scope user\|project`, `--pack NAME[,NAME]`, `--profile NAME`, `--with-rules`, `--dry-run` |
+| `bootstrap.sh` | Installer: `--scope user\|project`, `--pack NAME[,NAME]`, `--profile NAME`, `--with-rules`, `--force`, `--dry-run` |
+| `session-start.sh` | New session in a project that commits its `.claude/`: installs graphify's CLI, reports drift, changes nothing |
 | `project-init.sh` | Per-project graphify wiring and a code-only graph build |
 | `sources.lock` | Allowed sources and pins |
 | `packs.conf` | Which items each optional pack installs |
@@ -175,7 +183,7 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 | `scripts/profile_save.sh` | Captures tailoring done in `./.claude` as a profile |
 | `scripts/*.py` | Two small helpers (fail-open hooks, marked `CLAUDE.md` blocks) |
 | `profiles/<name>/` | Saved tailoring for one product (created by `profile_save.sh`) |
-| `rules/CLAUDE.md` | My standing rules (draft); installed only with `--with-rules` |
+| `rules/CLAUDE.md` | My standing rules for agents; installed only with `--with-rules` |
 | `docs/context-mode.md` | Evaluation notes on `context-mode`; not installed |
 | `tests/` | Regression tests: `bash tests/run.sh` (needs network; uses a throwaway HOME) |
 | `.agent-memory/LESSONS.md` | Lessons learned while building this repo (memory pack format); not installed |
@@ -186,7 +194,8 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 - **user** (default): everything goes to `~/.claude`. Project repos stay clean, and it applies to every repo
   on that machine. Graphify gets its skill and a `CLAUDE.md` section here, but no hooks.
 - **project**: everything goes to `./.claude` of the working directory, plus a `CLAUDE.md` there, with
-  graphify's hooks. Files stay untracked until you add them; do not commit them by accident.
+  graphify's hooks. Commit `.claude/` when agents work in ephemeral cloud containers, so every session gets
+the same toolkit (start those sessions with `session-start.sh`); otherwise keep it untracked.
 
 Project scope also keeps a pristine copy of what it installed in `.claude/.vibe-setup/pristine/`, so any
 tailoring can be diffed against upstream. Pack items are part of that copy, and the packs installed are
@@ -224,10 +233,11 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 233 checks
-when this was written). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh` prints the
+total; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
 
-- Dry run; full install; re-run (no duplicates); stop on a tampered Ponytail hash (exit 1, nothing installed).
+- Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
+  stop on a tampered Ponytail hash (exit 1, nothing installed).
 - Ponytail's `LICENSE` matches its pin and every Ponytail and Agent Skills skill folder has its MIT `LICENSE`; a
   changed Ponytail `LICENSE` stops the install with nothing installed.
 - `--with-rules` writes its block above graphify's `CLAUDE.md` section and replaces it in place on re-run.
@@ -239,7 +249,9 @@ when this was written). They never touch the real `~/.claude` or uv tools. The c
   an older run left below that section is moved, not copied; a begin marker already lost is reported),
   re-save and compare (identical), pin-drift warning, "nothing to save", and nine hostile profiles (settings
   override, `../` and absolute removals, non-skill removal, symlink, removal of a whole folder (two forms),
-  removal or override of graphify's skill) all refused with nothing installed.
+  removal or override of graphify's skill) all refused with nothing installed. `AGENTS.md` carries the
+  `PROJECT.md` block once after several re-runs. A re-run that would overwrite an edit no profile holds exits 1
+  before changing anything and names the file, with or without `--profile`; `--force` goes ahead with a warning.
 - Profile licences: a tailored Agent Skills skill keeps its MIT `LICENSE`, a tailored Agent Skills agent gets
   `LICENSES/agent-skills.txt`, and `NOTICE.md` lists exactly the tailored third-party items (identical on a round
   trip); a profile with only new files gets neither; an install from before the licences were copied warns and
