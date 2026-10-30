@@ -1121,7 +1121,7 @@
 -7. Commit with a descriptive message
 -8. Mark the task complete and stop
 +7. Commit on the task branch with a Conventional Commits message. The task branch is `feat/<ticket>-<short-name>`, created from `origin/main` (`git fetch origin && git checkout -B feat/<ticket>-<short-name> origin/main`). In a Claude cloud session that can only push its assigned branch, reset that branch to `origin/main` first and use it. Never commit to `main`, and never put a second task on a branch whose PR is still open.
-+8. Push the branch and open a PR titled `<ticket>: <task title>` whose body lists the acceptance criteria and the tests added. Run `/tiered-review` (it posts its verdicts on the PR), mark the task complete in `tasks/todo.md`, and stop for the user. The user approves and merges; the next task starts from the updated `origin/main`.
++8. Push the branch and open a PR titled `<ticket>: <task title>` whose body lists the acceptance criteria and the tests added. Tick the task's boxes in `tasks/todo.md` in the task's last commit, then run `/tiered-review` (it posts its verdicts on the PR) and stop for the user. A commit pushed after the review needs a new review. The user approves and merges; the next task starts from the updated `origin/main`.
  
  ## Autonomous: the whole plan (`/build auto`)
  
@@ -1142,7 +1142,7 @@
  7. **Summarize at the end:** tasks completed, tests added, commits made, and anything skipped, flagged, or left for the user.
 --- a/commands/tiered-review.md
 +++ b/commands/tiered-review.md
-@@ -1,54 +1,123 @@
+@@ -1,54 +1,126 @@
  ---
 -description: Tiered code review - picks the mid-level, senior or lead reviewer from what the diff touches, runs that read-only agent, and follows its escalations. Separate from /review, the single-pass five-axis review.
 +description: Two-stage review before merge - stage 1 runs senior-engineer and every module owner the diff touches, stage 2 runs lead-engineer on every PR, then lists the merge gate (CI green, both stages approved, the user approves). --tier runs a single agent as a quick check, not a merge review. Separate from /review, the single-pass five-axis review.
@@ -1214,10 +1214,12 @@
 -Return each reviewer's report as written, under a heading that names the tier, then one combined verdict:
 -the strictest verdict of any tier that ran. Do not change code here; fixes are a separate step the user asks
 -for.
-+- **Full gate**: the PR changes `SPEC.md`, any `SPEC-*.md`, `docs/adr/`, `docs/threat-model.md` or `tasks/`, or
-+  touches money code:
++- **Full gate**: the PR changes `SPEC.md`, any `SPEC-*.md`, `docs/adr/`, `docs/threat-model.md` or
++  `tasks/plan.md`, adds, removes or rewrites a task in `tasks/todo.md` (ticking a task's boxes does not count),
++  or touches money code:
 +  `services/ledger/`, `engine/matching/`, `services/trading/`, `services/custody/`, `contracts/`,
-+  `services/npr-payments/`, `services/withdrawals/` or `services/reconciliation/`. Stage 1 runs
++  `services/npr-payments/`, `services/withdrawals/`, `services/reconciliation/`, `crates/money/` or
++  `crates/events/` (the shared money and event-type crates; keep their real paths here). Stage 1 runs
 +  senior-engineer and every owner the table below matches by path or by content.
 +- **Module tier**: any other PR. Stage 1 runs senior-engineer and the owners the task names under "Owner
 +  module" in `tasks/todo.md` (none for "Owner module: none"), plus any owner the table matches by path.
@@ -1233,6 +1235,7 @@
 +| Module (`SPEC.md`) | Paths | Owner agents | Or the diff touches |
 +|---|---|---|---|
 +| platform | `crates/`, `services/skeleton/`, `infra/`, `.github/`, `Makefile` | none (senior only) | CI gates, pinning, the local stack |
++| platform: money and event types | `crates/money/`, `crates/events/` | ledger-owner, matching-engine-owner | amounts, prices, quantities, scales, the event envelope, the schema lint |
 +| audit-log | `services/audit-log/` | compliance-owner | audit records, hash chain, retention |
 +| reference-data | `services/reference-data/` | quant-owner | assets, markets, steps, bands, fees, limits, thresholds |
 +| identity | `services/identity/` | compliance-owner (lead-engineer applies its API and identity checklist at stage 2) | sign-up, login, 2FA, sessions, API keys, the 24-hour lock |

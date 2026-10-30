@@ -27,10 +27,12 @@ included.
 
 The user approved these tiers on 2026-10-30. Say which tier ran in the report and in the PR record.
 
-- **Full gate**: the PR changes `SPEC.md`, any `SPEC-*.md`, `docs/adr/`, `docs/threat-model.md` or `tasks/`, or
-  touches money code:
+- **Full gate**: the PR changes `SPEC.md`, any `SPEC-*.md`, `docs/adr/`, `docs/threat-model.md` or
+  `tasks/plan.md`, adds, removes or rewrites a task in `tasks/todo.md` (ticking a task's boxes does not count),
+  or touches money code:
   `services/ledger/`, `engine/matching/`, `services/trading/`, `services/custody/`, `contracts/`,
-  `services/npr-payments/`, `services/withdrawals/` or `services/reconciliation/`. Stage 1 runs
+  `services/npr-payments/`, `services/withdrawals/`, `services/reconciliation/`, `crates/money/` or
+  `crates/events/` (the shared money and event-type crates; keep their real paths here). Stage 1 runs
   senior-engineer and every owner the table below matches by path or by content.
 - **Module tier**: any other PR. Stage 1 runs senior-engineer and the owners the task names under "Owner
   module" in `tasks/todo.md` (none for "Owner module: none"), plus any owner the table matches by path.
@@ -46,6 +48,7 @@ run the owners `SPEC.md` names, and fix this table in the same PR.
 | Module (`SPEC.md`) | Paths | Owner agents | Or the diff touches |
 |---|---|---|---|
 | platform | `crates/`, `services/skeleton/`, `infra/`, `.github/`, `Makefile` | none (senior only) | CI gates, pinning, the local stack |
+| platform: money and event types | `crates/money/`, `crates/events/` | ledger-owner, matching-engine-owner | amounts, prices, quantities, scales, the event envelope, the schema lint |
 | audit-log | `services/audit-log/` | compliance-owner | audit records, hash chain, retention |
 | reference-data | `services/reference-data/` | quant-owner | assets, markets, steps, bands, fees, limits, thresholds |
 | identity | `services/identity/` | compliance-owner (lead-engineer applies its API and identity checklist at stage 2) | sign-up, login, 2FA, sessions, API keys, the 24-hour lock |
