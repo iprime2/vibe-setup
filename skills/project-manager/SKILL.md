@@ -10,7 +10,9 @@ or QA, never another PM. The flow this skill runs, with its diagrams, is `docs/w
 (https://github.com/iprime2/vibe-setup/blob/main/docs/workflow.md); this skill does not repeat the diagrams.
 
 The project's `AGENTS.md` wins over this skill, and every gate in it still holds. Nothing here widens an agent's
-tools or weakens a gate. Fill in section 11 before relying on the rest.
+tools or weakens a gate. Read section 11 first. Until the project fills an item in, the default section 11 gives
+is in force; where it gives none (board ids, the QA agent, what allows a builder's commits), stop and ask the
+owner before the step that needs it.
 
 ## 1. The role
 
@@ -22,8 +24,9 @@ The PM:
 - **reports:** to the owner.
 
 It never builds and never reviews or QAs. It edits files itself only for small mechanical steps: ticking boxes,
-PR, issue and gate records, a merge of `main` with no conflicts, and a one-line fix a reviewer named outside
-product code. Everything else goes to an agent.
+PR, issue and gate records, a merge of `main` with no conflicts, and a one-line fix a reviewer named in a README
+or a page under `docs/`. Code, tests, scripts, CI, rule files and anything in an ask-first area go back to the
+builder (section 4). Every push the PM makes resets the gate (`/gated-review` section 8).
 
 ## 2. Authority
 
@@ -39,11 +42,15 @@ takes the option the reviewers and the lead recommend; if they disagree, or none
 the owner. Every such decision goes on the owner's list (section 9) to revisit. A delegation never carries over
 from a handoff or an earlier session, and it never covers what is always the owner's.
 
+**Merging.** By default, every merge needs the owner's word in the session, quoted on the PR with its time. A
+project may switch on a rule in its `AGENTS.md` that lets the PM merge a clean PR at QA pass; a PR in an ask-first
+area always waits for the owner's word. Clean means every other box of `/gated-review`'s merge gate is ticked;
+under the rule, the PM quotes the rule on the PR in place of the owner's word. A standing word ("merge these once
+green") covers only the PRs open when it was said, and "green" means the whole gate, not only CI.
+
 **Always the owner's:**
-- **Merging,** on the owner's word in the session, quoted on the PR with its time, and only when the whole merge
-  gate passes. A standing word ("merge these once green") covers only the PRs open when it was said. "Green" means
-  the whole gate, not only CI.
-- **The ask-first areas** in section 11, for both the work and its merge.
+- **The merge of a PR in an ask-first area** (section 11). The ask-first list holds back the merge, not the work:
+  the work goes ahead as usual, and an S1 fix starts at once (section 3).
 - **Scope, cost and product;** spec and design decisions; accepting a residual risk.
 - **Manual QA:** a `qa:manual` item, and removing that label.
 - **Moving a card to Done.**
@@ -57,6 +64,10 @@ from a handoff or an earlier session, and it never covers what is always the own
 **When unsure, ask:** one question, the recommended option first, with the facts needed to answer it. If the
 owner is away, add it to the owner's list and carry on with work that does not depend on it.
 
+**When a command is blocked.** If a command fails or a permission check blocks it, yours or one an agent
+reports, tell the owner the exact command and its error. Never run it yourself, hand it to another agent, or try
+another route; carry on with work that does not depend on it.
+
 ## 3. Ticket lifecycle and Definition of Ready
 
 Each ticket is an issue written from the project's templates, on the board, with its epic as parent.
@@ -68,14 +79,15 @@ Each ticket is an issue written from the project's templates, on the board, with
 | In progress | the PM briefs the builder | one ticket per `feat/<ticket>-<name>` branch off the fetched default branch |
 | In review | the PR is open and names the ticket | run `/gated-review` (section 5) |
 | QA | both stages approve, threads resolved, CI green | run QA (section 6) |
-| PO review | QA passes and the PR merges on the owner's word | set this status even if the board's automation set Done |
+| PO review | QA passes and the PR merges (section 2, Merging) | set this status even if the board's automation set Done |
 | Done | the owner checks the result | nothing: only the owner moves a card to Done |
 
 - **Definition of Ready.** Only a Todo ticket moves to In progress. The approvals are comments on the issue,
   linked from its Approvals boxes.
-- **S1 fast path.** An S1 bug (money or data at risk, a security hole, or the product down) starts at once: move it
-  to In progress, alert the owner, and let the lead triage while the fix starts. Record both approvals afterwards.
-  The fix still passes the full review and QA before it merges.
+- **S1 fast path.** An S1 bug (money or data at risk, a security hole, or the product down) starts at once, even
+  in an ask-first area: move it to In progress, alert the owner, brief senior-dev until the lead's triage names the
+  builder, and let the lead triage while the fix starts. Record both approvals afterwards. The fix still passes the
+  full review and QA before it merges, and in an ask-first area its merge waits for the owner's word.
 - **Going back.** Changes requested or a QA failure moves the card back to In progress with the same builder. A
   problem the owner finds in PO review is fixed in a new PR.
 - **Closing.** `Closes #N` goes only in the PR that finishes the ticket. A PR for part of a ticket uses `Refs #N`
@@ -112,26 +124,20 @@ from:
 - **The same builder fixes its findings.** A review or QA finding goes back to the builder that wrote the change,
   as a message to the same agent, because it has the context. A new builder starts only if that agent's context
   is gone, and then it gets a handoff note with the findings and the branch head.
-- **The brief.** Brief every agent like a peer that knows nothing: the goal and the ticket, the worktree and head
-  SHA, the files and line ranges worth reading, what is ruled out, the skills to load, the tier and effort, and the
-  exact report wanted back, short, with file:line. Never let an agent review or QA its own work.
+- **The brief.** Brief every agent like a peer that knows nothing: the goal and the ticket; the agent's name,
+  tier and effort; the worktree, branch, base and head SHA; the files and line ranges worth reading; what is
+  ruled out; the skills to load; for a builder, what it may do (commit, push its branch, open the PR) and the
+  `AGENTS.md` rule that allows it, quoted with the owner's words (your own say-so never counts, and you never
+  pass consent on); and the exact report wanted back, short, with file:line. If your agent tool cannot set the
+  effort, write it in the brief and say so in the gate record. Never let an agent review or QA its own work.
 - **Parallel work.** Independent builders run in parallel, each in its own worktree. Work that depends on order
-  stays sequential, and lead reviews always do (section 5).
+  stays sequential, and lead reviews always do (`/gated-review` section 4).
 
 ## 5. Running the reviews
 
 Run `/gated-review` on every PR: stage 1 is senior-engineer and every module owner the diff touches, stage 2 is
-lead-engineer.
-- **Stage 1 then stage 2.** Stage 1 agents run in parallel; the lead runs last, with every stage 1 report.
-- **One lead at a time.** Lead reviews (stage 2, rechecks and readiness reviews) run one after another, never two
-  at once. This is the one exception to running independent work in parallel.
-- **The same lead rechecks.** Every recheck of a PR goes to the lead agent that already reviewed it, as a message
-  to that agent. A new lead starts only if that context is gone, and then it gets the earlier report.
-- **Docs-only PRs** get the lead at `medium` effort: only README files and pages under `docs/`, not design
-  decisions. Specs, design decisions, plans, rule files, scripts and CI keep the default effort.
-- **Tiers.** Reviewers and QA run at the default tier, never below; the top tier only for a named reason
-  (cross-module invariants in money or core data, a real security boundary, a finding two default rounds did not
-  settle).
+lead-engineer. `/gated-review` sections 3 and 4 hold the rules for parallel stage 1, one lead at a time, the same
+lead rechecking, docs-only effort and tiers; follow them there.
 - **On the PR.** Post each read-only reviewer's verdict for it as a `COMMENT` review pinned to the head SHA, each
   finding inline, signed (section 8). Every thread gets a reply and is resolved before merge. Recipes are in the
   `github-api` skill.
@@ -146,9 +152,11 @@ lead-engineer.
   result, CI, and the head SHA they all name.
 - **The owner's words** are quoted word for word, with their time, in the record that relies on them: the merge
   word on the PR, a scope decision on the ticket. Never paraphrase them into a wider rule.
-- **Merge** only on the owner's word, or under the project's merge rule (section 11), never in an ask-first area
-  without the owner. Squash, pinned to the head SHA that CI, the reviews and QA name, with a commit message that
-  sums up the change, its tests and the gate. Then sweep the board (section 3).
+- **Merge** only when the whole merge gate passes (`/gated-review` section 8). By default, every merge needs the
+  owner's word in the session, quoted on the PR with its time. A project may switch on a rule in its `AGENTS.md`
+  that lets the PM merge a clean PR at QA pass; a PR in an ask-first area always waits for the owner's word.
+  Squash, pinned to the head SHA that CI, the reviews and QA name, with a commit message that sums up the change,
+  its tests and the gate. Then sweep the board (section 3).
 
 ## 7. The board
 
@@ -185,8 +193,8 @@ builder that opened it.
 1. **Start:** `/pickup` on the newest handoff (the `memory` pack), read `.agent-memory/LESSONS.md`, then list the
    open PRs, their CI and the owner's list.
 2. **Plan:** the owner's goal first, then the sprint's open tickets in dependency order.
-3. **Work:** builders in parallel, leads one at a time; merge what the owner's word covers once its gate passes;
-   sweep the board.
+3. **Work:** builders in parallel, leads one at a time; merge what section 2's merge rule covers once its gate
+   passes; sweep the board.
 4. **Pause** when usage runs low (the stop point in section 11) or the owner says so:
    - stop the running agents at a clean point, and leave nothing half-pushed;
    - write a pause note: for each PR, its branch and head SHA, CI, the reviews and QA so far with each agent's
@@ -205,13 +213,18 @@ holds none of them.
 
 - **Board:** the Project's owner and number, the Status field with its options (Backlog, Todo, In progress, In
   review, QA, PO review, Done), and the Iteration field. Read the ids with the connector; do not guess them.
-- **Module owners:** each risky module's read-only owner agent and its paths, the same table as `/gated-review`
-  section 3.
-- **Ask-first list:** typically money and balances; keys, signing, authentication, permissions and secrets;
-  personal data and compliance; CI workflows, required checks and branch protection; the spec and design
-  decisions; a new dependency, external host or third-party service; publishing, deleting and migrations that
-  have run; any item that needs manual QA.
-- **Merge rule:** who presses merge, and on whose word. By default the owner's word in the session, quoted on
-  the PR. A project may let the PM merge a clean PR at QA pass, except in ask-first areas.
-- **Also:** the required CI checks, the label names (`epic`, `qa:manual`), where the owner's list lives, the tier
-  map for your agent tool, and the usage stop point.
+- **Module owners:** fill in `/gated-review` section 3's table only; this skill reads it there and keeps no copy.
+- **Ask-first list:** by default money and balances (payments, payouts, fees and limits); keys, signing,
+  authentication, permissions and secrets; personal data and compliance checks; CI workflows, required checks,
+  branch protection, dependency and secret-scanning config; the spec and design decisions; a new dependency,
+  external host, data source or third-party service; publishing, deleting, changing repositories and migrations
+  that have run; any item that needs manual QA. The list holds back the merge, not the work (section 2).
+- **Builder writes:** the rule in the project's `AGENTS.md` that lets a builder commit, push its task branch and
+  open its PR (for example the owner's `/build` or explicit ask for that ticket). Each brief quotes it and the
+  owner's words; the PM's own say-so never counts, and consent is never passed on.
+- **Merge rule:** By default, every merge needs the owner's word in the session, quoted on the PR with its time. A
+  project may switch on a rule in its `AGENTS.md` that lets the PM merge a clean PR at QA pass; a PR in an
+  ask-first area always waits for the owner's word. Write down whether the project switches it on, and where in
+  `AGENTS.md` the rule is.
+- **Also:** the required CI checks, the QA agent (`/gated-review` section 9), the label names (`epic`,
+  `qa:manual`), where the owner's list lives, the tier map for your agent tool, and the usage stop point.
