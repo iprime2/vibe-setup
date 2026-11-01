@@ -32,7 +32,7 @@ fm() { awk -v k="$2" 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit
 body() { awk 'NR == 1 && $0 == "---" { f = 1; next } f && $0 == "---" { f = 0; b = 1; next } b' "$1" 2>/dev/null; }
 body_has() { body "$1" | grep -qF -- "$2"; }
 # keys FILE: the frontmatter's key names, sorted. tail_of FILE: from "## Never" to the end (the builders' safety text).
-keys() { awk 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit } match($0, /^[A-Za-z_-]+:/) { print substr($0, 1, RLENGTH - 1) }' "$1" 2>/dev/null | LC_ALL=C sort | xargs; }
+keys() { awk 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit } { if (match($0, /^[A-Za-z_-]+: /)) print substr($0, 1, RLENGTH - 2); else print "?" }' "$1" 2>/dev/null | LC_ALL=C sort | xargs; }
 tail_of() { sed -n '/^## Never$/,$p' "$1" 2>/dev/null; }
 # The owner's merge rule (2026-11-01), word for word wherever it is stated. flat FILE joins lines and squeezes spaces.
 MERGE_RULE="By default, every merge needs the owner's word in the session, quoted on the PR with its time. A project may switch on a rule in its \`AGENTS.md\` that lets the PM merge a clean PR at QA pass; a PR in an ask-first area always waits for the owner's word."
