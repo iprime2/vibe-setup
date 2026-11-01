@@ -12,6 +12,8 @@ Words you can add to the last line of the prompt:
 - `with rules`: also install `rules/CLAUDE.md` into `CLAUDE.md` (review it first).
 - `project scope`: install untailored into `./.claude` instead of `~/.claude`.
 - `project init`: also wire graphify into the current git repo and build a code-only graph.
+- `working flow`: after the install, offer to set up the working flow in `docs/workflow.md` (rules, templates,
+  board); nothing is written without your yes.
 - `packs <list>`: also install optional packs, comma-separated (`roles`, `quant`, `systems`, `web3`,
   `fintech`, `security`, `mobile`, `ops`, `memory`, or `all`); see "Packs" in the README. `memory` adds
   `/learn`, `/handoff` and `/pickup` for lessons and handoffs kept in the project repo.
@@ -57,7 +59,9 @@ Set up my vibe-coding toolkit in this environment from my setup repo, iprime2/vi
 
 9. PROJECT WIRING. Only if I wrote "project init" below and the working directory is a git repo: run bash <repo>/project-init.sh --dry-run, show me, then run it without --dry-run.
 
-10. VERIFY AND REPORT. Show graphify --version and the files bootstrap listed. Tell me whether the new skills and slash commands appear in your skill list (they may only appear on your next turn or in a new session). If project init ran, show git status --short and the first 5 lines of graphify-out/GRAPH_REPORT.md. List anything that still needs a restart and anything you could not do. Do not commit anything in the project repo.
+10. WORKING FLOW. Only if I wrote "working flow" below: read <repo>/docs/workflow.md and <repo>/docs/ticket-templates.md, then propose, as diffs for my approval, the rules for this project's AGENTS.md and the issue forms for .github/ISSUE_TEMPLATE/. Ask me for the module owners and the ask-first areas instead of guessing them. Apply only what I approve, commit nothing, and list the board setup (status values, the Iteration field, views) for me to do or approve.
+
+11. VERIFY AND REPORT. Show graphify --version and the files bootstrap listed. Tell me whether the new skills and slash commands appear in your skill list (they may only appear on your next turn or in a new session). If project init ran, show git status --short and the first 5 lines of graphify-out/GRAPH_REPORT.md. List anything that still needs a restart and anything you could not do. Do not commit anything in the project repo.
 
 Options for this run: (write here, or leave empty)
 ```

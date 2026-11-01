@@ -80,8 +80,7 @@ The role agents are read-only (`tools: Read, Grep, Glob`). `/tiered-review` pick
 APIs and cross-service contracts), runs that agent, and follows its escalations. It does not replace `/review`.
 Everything here is generic: product-, employer- and country-specific rules belong in a profile.
 Agent Skills' own agents (`code-reviewer`, `security-auditor`, `test-engineer`, `web-performance-auditor`)
-inherit every tool unless a profile adds a `tools:` line; the crypto-exchange-np profile limits them to Read,
-Grep and Glob.
+inherit every tool unless a profile adds a `tools:` line; a profile can limit them to Read, Grep and Glob.
 
 Where a third-party skill in a pack is looser than the skill written here, the skill written here says so and
 wins: `blockchain-developer` refuses a token whose `decimals()` call fails (`evm-token-decimals` falls back to
@@ -125,6 +124,14 @@ then warns and marks the licence text missing in `NOTICE.md`. Replay the profile
 
 Agent Skills itself has `observability-and-instrumentation` at the current pin; adding it to `AGENT_SKILLS_LIST`
 is the simplest route to generic observability guidance.
+
+## Working flow
+
+[docs/workflow.md](docs/workflow.md) describes a way of working with AI agents: who decides what, the ticket
+lifecycle on a GitHub Projects board, builders chosen by complexity, the two-stage review, QA before merge, and
+the areas that always wait for the owner. [docs/ticket-templates.md](docs/ticket-templates.md) has the ticket,
+epic and bug templates it uses. Neither is installed; copy what fits into your project's `AGENTS.md` and
+`.github/ISSUE_TEMPLATE/`.
 
 ## Memory and handoffs
 
@@ -185,6 +192,7 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 | `profiles/<name>/` | Saved tailoring for one product (created by `profile_save.sh`) |
 | `rules/CLAUDE.md` | My standing rules for agents; installed only with `--with-rules` |
 | `docs/context-mode.md` | Evaluation notes on `context-mode`; not installed |
+| `docs/workflow.md`, `docs/ticket-templates.md` | The working flow for a vibe-coded project, with diagrams, and its ticket, epic and bug templates; not installed |
 | `tests/` | Regression tests: `bash tests/run.sh` (needs network; uses a throwaway HOME) |
 | `.agent-memory/LESSONS.md` | Lessons learned while building this repo (memory pack format); not installed |
 | `AGENTS.md`, `CLAUDE.md` | Point agents working on this repo to `.agent-memory/`; not installed |
