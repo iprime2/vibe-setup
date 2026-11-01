@@ -76,10 +76,10 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 | `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup` (see "Memory and handoffs") | |
 | `pm` | skills `project-manager`, `github-api`; agents `junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`; command `/gated-review` (see "Project manager pack") | |
 
-The role agents are read-only (`tools: Read, Grep, Glob`); only the `pm` pack's builders write. `/tiered-review`
-picks the tier from the diff (mid-level by default; senior for logic, concurrency, money or security; lead for new
-services, schemas, APIs and cross-service contracts), runs that agent, and follows its escalations. It does not
-replace `/review`.
+The role agents are read-only (`tools: Read, Grep, Glob`); of the agents written here, only the `pm` pack's
+builders write (Agent Skills' own agents are covered below). `/tiered-review` picks the tier from the diff
+(mid-level by default; senior for logic, concurrency, money or security; lead for new services, schemas, APIs and
+cross-service contracts), runs that agent, and follows its escalations. It does not replace `/review`.
 `ai-engineer` reviews the agent setup itself: `CLAUDE.md`, `AGENTS.md`, skills, agent files, commands, hooks and
 templates, for unclear or conflicting instructions, routing between agents, tool access, cost and the gates. Run
 it on a change to those files or when agents keep repeating a mistake. `/tiered-review` does not pick it.
@@ -106,7 +106,7 @@ bootstrap prints informational `WARN` lines for the items it names from them.
   (`Read, Edit, Write, Bash, Grep, Glob`). Each has a default `effort` in its frontmatter (medium, high, xhigh,
   max) and states it in its body; whether a harness reads `effort` from agent frontmatter is not tested here.
   They never review, approve, QA or merge, and never push to `main`. A test pins their tools and keeps every other
-  agent read-only.
+  agent written here read-only.
 - `/gated-review` is the two-stage merge review: senior-engineer and the module owners (from a table you fill
   in), then lead-engineer, then QA, then your word. `/tiered-review` is unchanged and stays the one-tier check.
 
@@ -268,7 +268,7 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 267 checks
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 282 checks
 on 2026-11-01; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
 cloud-session results are manual.
 
@@ -308,8 +308,10 @@ cloud-session results are manual.
 - Agents and the `pm` pack (offline): every agent outside the builder allowlist has exactly
   `tools: Read, Grep, Glob`; each of `junior-dev`, `mid-dev`, `senior-dev` and `lead-dev` has exactly `Read, Edit,
   Write, Bash, Grep, Glob`, its default effort (medium, high, xhigh, max), and the text that it never reviews,
-  approves, QAs or merges and never pushes to `main`; `PACK_pm` lists exactly its seven items, no other pack
-  installs a builder, and `--pack pm` installs exactly those seven.
+  approves, QAs or merges and never pushes to `main`; every agent's frontmatter has exactly its allowed keys; the
+  four builders' Never and When blocked sections are identical; the owner's merge rule reads the same in the
+  project-manager skill (sections 2, 6 and 11), `/gated-review` and `docs/workflow.md`; `PACK_pm` lists exactly
+  its seven items, no other pack installs a builder, and `--pack pm` installs exactly those seven.
 
 - Memory (offline): `check.py` accepts the skill's own lesson and handoff examples and changes no file; names
   each format problem (duplicate or malformed id, missing or empty field, bad status, scope or count, undated
