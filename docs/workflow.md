@@ -10,9 +10,10 @@ What vibe-setup gives you, and what you add per project:
 | From vibe-setup (packs) | You add in each project |
 |---|---|
 | Reviewer agents (`senior-engineer`, `lead-engineer`, `mid-level-engineer`), read-only | Your module owners: one reviewer agent per risky module, also read-only |
-| `/tiered-review` | Which paths go to which owner, and which paths get the full gate |
+| Builder agents (`junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`, `pm` pack), the only ones with write tools | |
+| `/gated-review` (`pm` pack), the two-stage review; `/tiered-review` for a one-tier quick check | Which paths go to which owner, and which paths get the full gate |
 | `/pickup`, `/learn`, `/handoff` and `.agent-memory/` (`memory` pack) | `AGENTS.md` with the rules below, a spec (`SPEC.md`) and a task list |
-| Domain skills (packs) | A project-manager skill: your board ids, ask-first list and ticket flow |
+| `project-manager` and `github-api` skills (`pm` pack), and domain skills (packs) | The project-manager skill's "Fill in for your project" section: your board ids, ask-first list, merge rule and builder writes; module owners and the QA agent go in `/gated-review` sections 3 and 9 |
 | | Ticket and bug templates (see [ticket-templates.md](ticket-templates.md)) |
 
 ## 1. Who does what
@@ -55,8 +56,9 @@ flowchart TD
   the lead triages while the fix starts, and both approvals are recorded afterwards. The fix still passes the
   full review and QA.
 - **Merge.** The PR's `Closes #N` closes the ticket when it merges. The PM then sets the card to PO review, even if
-  the board's own automation set it to Done. Who may press merge is your rule: by default the owner's word in the
-  session, quoted on the PR. A project can let the PM merge a clean PR at QA pass, except in ask-first areas.
+  the board's own automation set it to Done. Who may press merge is your rule. By default, every merge needs the
+  owner's word in the session, quoted on the PR with its time. A project may switch on a rule in its `AGENTS.md`
+  that lets the PM merge a clean PR at QA pass; a PR in an ask-first area always waits for the owner's word.
 
 ## 3. One ticket, end to end
 
@@ -99,15 +101,16 @@ effort the lead set.
 
 ## 5. Reviews
 
-- **Two stages.** `/tiered-review` runs stage 1 (senior-engineer and every module owner the diff touches), then
+- **Two stages.** `/gated-review` runs stage 1 (senior-engineer and every module owner the diff touches), then
   stage 2 (lead-engineer). Specs, architecture decisions, plans and money code get the full gate: every owner the
   diff touches.
 - **One lead at a time.** Lead reviews run one after another, never two at once. Running two in parallel does not
   save usage; it only spends it faster, and two leads can rule differently on the same question.
 - **The same lead rechecks.** Every recheck of a PR goes to the lead that already reviewed it, as a message to the
   same agent, so it does not re-read every file. A new lead starts only if that agent's context is gone.
-- **Lighter effort for docs-only PRs.** A PR that changes only README files and pages under `docs/` can get the
-  lead at `medium` effort. Specs, architecture decisions, plans, rule files, scripts and CI keep full effort.
+- **Lighter effort for docs-only PRs.** A PR that changes only README files and pages under `docs/` (not design
+  decisions) gets the lead at `medium` effort. Specs, architecture decisions, plans, rule files, scripts and CI keep
+  full effort.
 - **On the PR.** The PM posts each read-only reviewer's verdict as a GitHub review, with each finding as an
   inline comment on its line. Every thread gets a reply and is resolved before merge: fixed (name the commit),
   ruled out (quote the ruling), or carried to a named follow-up.
@@ -158,10 +161,11 @@ These wait for the owner's word to merge. Name your own in `AGENTS.md` and in th
 
 ## 9. Adopting it in a new project
 
-1. Install vibe-setup at project scope with the `roles` and `memory` packs (see the README).
+1. Install vibe-setup at project scope with the `roles`, `memory` and `pm` packs (see the README).
 2. Write `AGENTS.md`: the working rules, the merge rule, the ask-first list, and the rules in sections 2 to 6.
-3. Add your module-owner agents (read-only) and their paths in `/tiered-review`.
+3. Add your module-owner agents (read-only) and their paths in `/gated-review` (its section 3).
 4. Copy the templates in [ticket-templates.md](ticket-templates.md) into `.github/ISSUE_TEMPLATE/`.
 5. Create the board with the Status values and the Iteration field above, then the views.
-6. Write the project-manager skill: your board ids, your ask-first list, and when it brings you a decision.
+6. Fill in the project-manager skill's last section: your board ids, ask-first list, merge rule and builder
+   writes (module owners and the QA agent live in `/gated-review` sections 3 and 9).
 7. Save the tailoring as a profile only if nothing in it is confidential: this repo is public.

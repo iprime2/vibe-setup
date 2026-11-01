@@ -13,12 +13,31 @@ ALL_ITEMS=""; for p in $ALL_PACKS; do ALL_ITEMS="$ALL_ITEMS $(packvar "PACK_$p")
 n_kind() { printf '%s\n' $ALL_ITEMS | grep -c "^$1:"; }
 NPSKILLS=$(( $(n_kind skill) + $(n_kind tob) + $(n_kind wsh) + $(n_kind ecc) ))
 NPCMDS=$(n_kind command)
-NPAGENTS=$(n_kind agent)
 TOB1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^tob:' | cut -d: -f2)"
 WSH1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^wsh:' | cut -d: -f2)"
 ECC1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^ecc:' | cut -d: -f2)"
 item_path() { case "$2" in agent:*) echo "$1/agents/${2#*:}.md" ;; command:*) echo "$1/commands/${2#*:}.md" ;; *) echo "$1/skills/${2#*:}/SKILL.md" ;; esac; }
 show_warns() { printf '%s\n' "$OUT" | grep '^WARN' | sed 's/^/    info: /'; }
+has_word() { case " $1 " in *" $2 "*) return 0 ;; esac; return 1; }
+
+# The builder allowlist: the only agents with write tools, each with its default effort. Every other agent
+# in agents/ must stay read-only; a new agent with write tools fails here until it is added by name.
+BUILDERS="junior-dev mid-dev senior-dev lead-dev"
+BUILDER_TOOLS="Read, Edit, Write, Bash, Grep, Glob"
+effort_of() { case "$1" in junior-dev) echo medium ;; mid-dev) echo high ;; senior-dev) echo xhigh ;; lead-dev) echo max ;; esac; }
+# The pm pack's items, as installed paths in C-locale order.
+PM_WANT="agents/junior-dev.md agents/lead-dev.md agents/mid-dev.md agents/senior-dev.md commands/gated-review.md skills/github-api skills/project-manager"
+# fm FILE KEY: every value of KEY in FILE's frontmatter, one per line. body FILE: the text after the frontmatter.
+fm() { awk -v k="$2" 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit } index($0, k ": ") == 1 { print substr($0, length(k) + 3) }' "$1" 2>/dev/null; }
+body() { awk 'NR == 1 && $0 == "---" { f = 1; next } f && $0 == "---" { f = 0; b = 1; next } b' "$1" 2>/dev/null; }
+body_has() { body "$1" | grep -qF -- "$2"; }
+# keys FILE: the frontmatter's key names, sorted. tail_of FILE: from "## Never" to the end (the builders' safety text).
+keys() { awk 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit } { if (match($0, /^[A-Za-z_-]+: /)) print substr($0, 1, RLENGTH - 2); else print "?" }' "$1" 2>/dev/null | LC_ALL=C sort | xargs; }
+tail_of() { sed -n '/^## Never$/,$p' "$1" 2>/dev/null; }
+# The owner's merge rule (2026-11-01), word for word wherever it is stated. flat FILE joins lines and squeezes spaces.
+MERGE_RULE="By default, every merge needs the owner's word in the session, quoted on the PR with its time. A project may switch on a rule in its \`AGENTS.md\` that lets the PM merge a clean PR at QA pass; a PR in an ask-first area always waits for the owner's word."
+flat() { tr '\n' ' ' < "$1" 2>/dev/null | tr -s ' '; }
+n_rule() { flat "$1" | grep -oF -- "$MERGE_RULE" | wc -l | tr -d ' '; }
 
 # Frontmatter: every skill and agent has a name (matching its folder or file) and a description,
 # names are unique per kind, and every command has a description.
@@ -59,6 +78,44 @@ for c in sorted(root.glob("commands/*.md")):
 print("\n".join(problems) or f"ok: {len(seen)} skills and agents")
 sys.exit(1 if problems else 0)
 EOF
+
+echo "== agent tools: the builders by name, every other agent read-only (offline)"
+ro=""; for f in "$REPO"/agents/*.md; do
+  n="$(basename "$f" .md)"; has_word "$BUILDERS" "$n" && continue
+  [ "$(fm "$f" tools)" = "Read, Grep, Glob" ] || ro="$ro $n"
+done
+if [ -z "$ro" ]; then ok "every agent outside the builder allowlist has exactly tools: Read, Grep, Glob"; else bad "not read-only, and not an allowlisted builder:$ro"; fi
+for n in $BUILDERS; do
+  f="$REPO/agents/$n.md"
+  check "$n: tools are exactly $BUILDER_TOOLS" test "$(fm "$f" tools)" = "$BUILDER_TOOLS"
+  check "$n: default effort is $(effort_of "$n")" test "$(fm "$f" effort)" = "$(effort_of "$n")"
+  check "$n: says it never reviews, approves, QAs or merges" body_has "$f" "Never review, approve, QA or merge"
+  check "$n: says it never pushes to main" body_has "$f" 'Never push to `main`'
+done
+# No agent gains a privilege through another frontmatter key (model, permission mode, hooks, ...).
+for f in "$REPO"/agents/*.md; do
+  n="$(basename "$f" .md)"
+  if has_word "$BUILDERS" "$n"; then want="description effort name tools"; else want="description name tools"; fi
+  check "$n: frontmatter keys are exactly [$want]" test "$(keys "$f")" = "$want"
+done
+# The four builders carry one safety text: Never and When blocked are identical in every builder.
+check "junior-dev: its safety text runs from Never to When blocked" grep -qx '## When blocked' <(tail_of "$REPO/agents/junior-dev.md")
+for n in mid-dev senior-dev lead-dev; do
+  check "$n: its Never and When blocked sections match junior-dev's" diff <(tail_of "$REPO/agents/junior-dev.md") <(tail_of "$REPO/agents/$n.md")
+done
+
+echo "== the merge rule reads the same everywhere (offline)"
+check "project-manager states it in sections 2, 6 and 11" test "$(n_rule "$REPO/skills/project-manager/SKILL.md")" -eq 3
+check "/gated-review section 8 states it" test "$(n_rule "$REPO/commands/gated-review.md")" -eq 1
+check "docs/workflow.md states it" test "$(n_rule "$REPO/docs/workflow.md")" -eq 1
+
+echo "== the pm pack (offline)"
+check "packs.conf lists the pm pack" has_word "$ALL_PACKS" pm
+pm_items="$(for it in $(packvar PACK_pm); do case "$it" in agent:*) echo "agents/${it#*:}.md" ;; command:*) echo "commands/${it#*:}.md" ;; *) echo "skills/${it#*:}" ;; esac; done | LC_ALL=C sort | xargs)"
+if [ "$pm_items" = "$PM_WANT" ]; then ok "PACK_pm lists exactly its seven items"; else bad "PACK_pm: [$pm_items], wanted [$PM_WANT]"; fi
+leak=""; for p in $ALL_PACKS; do [ "$p" = pm ] && continue; for it in $(packvar "PACK_$p"); do
+  case "$it" in agent:*) has_word "$BUILDERS" "${it#*:}" && leak="$leak $p:$it" ;; esac; done; done
+if [ -z "$leak" ]; then ok "no other pack installs a builder"; else bad "builders outside the pm pack:$leak"; fi
 
 echo "== flags and validation"
 mkdir -p "$W/c0"; cd "$W/c0" || exit 2
@@ -104,8 +161,16 @@ check "Trail of Bits copies carry CC-BY-SA-4.0" grep -q "Attribution-ShareAlike 
 check "wshobson copies carry the MIT licence" grep -q "MIT License" "$C/skills/$WSH1/LICENSE"
 check "ECC copies carry the MIT licence" grep -q "MIT License" "$C/skills/$ECC1/LICENSE"
 check "no installed skill needs CLAUDE_PLUGIN_ROOT" bash -c "! grep -rlq CLAUDE_PLUGIN_ROOT '$C/skills'"
-ro=""; for it in $ALL_ITEMS; do case "$it" in agent:*) grep -qx 'tools: Read, Grep, Glob' "$C/agents/${it#*:}.md" || ro="$ro ${it#*:}" ;; esac; done
-if [ -z "$ro" ]; then ok "the $NPAGENTS role agents are read-only (Read, Grep, Glob)"; else bad "not read-only:$ro"; fi
+ro="" nro=0 wr="" nwr=0
+for it in $ALL_ITEMS; do case "$it" in agent:*)
+  n="${it#*:}"
+  if has_word "$BUILDERS" "$n"; then
+    nwr=$((nwr + 1)); [ "$(fm "$C/agents/$n.md" tools)" = "$BUILDER_TOOLS" ] || wr="$wr $n"
+  else
+    nro=$((nro + 1)); [ "$(fm "$C/agents/$n.md" tools)" = "Read, Grep, Glob" ] || ro="$ro $n"
+  fi ;; esac; done
+if [ -z "$ro" ]; then ok "the $nro role agents are read-only (Read, Grep, Glob)"; else bad "not read-only:$ro"; fi
+if [ -z "$wr" ] && [ "$nwr" -eq 4 ]; then ok "the 4 installed builders have exactly $BUILDER_TOOLS"; else bad "builders installed: $nwr, with other tools:$wr"; fi
 capture python3 -I "$W/frontmatter.py" "$C"
 expect_rc "frontmatter is valid and names are unique" 0
 # This repo's items must not mention anything that the full install leaves out
@@ -151,6 +216,9 @@ for p in $ALL_PACKS; do
     bad "--pack $p: added [$(echo $added)], removed [$(echo $removed)], wanted [$(expected_items "$p" | xargs)]"
   fi
 done
+pm_added="$( [ -f "$W/pack-pm.names" ] && LC_ALL=C comm -13 "$W/base.names" "$W/pack-pm.names" | xargs)"
+if [ "$pm_added" = "$PM_WANT" ]; then ok "--pack pm installs exactly the project-manager and github-api skills, the four builders and /gated-review"
+else bad "--pack pm installed [$pm_added], wanted [$PM_WANT]"; fi
 
 echo "== a Trail of Bits pin that cannot be fetched stops with nothing installed"
 copy_repo "$W/tob-bad"

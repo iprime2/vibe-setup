@@ -74,10 +74,12 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 | `mobile` | `react-native-expo` | ECC `react-native-patterns` |
 | `ops` | | wshobson `prometheus-configuration`, `postmortem-writing` |
 | `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup` (see "Memory and handoffs") | |
+| `pm` | skills `project-manager`, `github-api`; agents `junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`; command `/gated-review` (see "Project manager pack") | |
 
-The role agents are read-only (`tools: Read, Grep, Glob`). `/tiered-review` picks the tier from the diff
-(mid-level by default; senior for logic, concurrency, money or security; lead for new services, schemas,
-APIs and cross-service contracts), runs that agent, and follows its escalations. It does not replace `/review`.
+The role agents are read-only (`tools: Read, Grep, Glob`); of the agents written here, only the `pm` pack's
+builders write (Agent Skills' own agents are covered below). `/tiered-review` picks the tier from the diff
+(mid-level by default; senior for logic, concurrency, money or security; lead for new services, schemas, APIs and
+cross-service contracts), runs that agent, and follows its escalations. It does not replace `/review`.
 `ai-engineer` reviews the agent setup itself: `CLAUDE.md`, `AGENTS.md`, skills, agent files, commands, hooks and
 templates, for unclear or conflicting instructions, routing between agents, tool access, cost and the gates. Run
 it on a change to those files or when agents keep repeating a mistake. `/tiered-review` does not pick it.
@@ -89,6 +91,27 @@ Where a third-party skill in a pack is looser than the skill written here, the s
 wins: `blockchain-developer` refuses a token whose `decimals()` call fails (`evm-token-decimals` falls back to
 18), and `rust-developer` keeps `expect()` and `panic!` out of production paths (some `rust-patterns` and
 `rust-testing` examples use them).
+
+**Project manager pack.** `pm` runs the [working flow](docs/workflow.md) in a project. It builds on `roles` (its
+review runs those reviewers) and `memory` (`/pickup`, `/handoff`), so install `--pack roles,memory,pm`; alone,
+bootstrap prints informational `WARN` lines for the items it names from them.
+
+- `project-manager` makes the session that talks with you the project manager. It writes and readies tickets,
+  briefs the builder the lead names at the tier and effort the lead sets, drives each PR through review and QA,
+  keeps the board, and brings you every decision that is yours. It never builds or reviews.
+- `github-api` holds its recipes: REST through `gh api repos/{owner}/{repo}/...`, which works where GraphQL is
+  blocked, plus reviews pinned to the head, review threads, sub-issues and board fields through a Projects
+  connector. Claims it could not check are marked **verify**.
+- `junior-dev`, `mid-dev`, `senior-dev` and `lead-dev` are builders, and the only agents here with write tools
+  (`Read, Edit, Write, Bash, Grep, Glob`). Each has a default `effort` in its frontmatter (medium, high, xhigh,
+  max) and states it in its body; whether a harness reads `effort` from agent frontmatter is not tested here.
+  They never review, approve, QA or merge, and never push to `main`. A test pins their tools and keeps every other
+  agent written here read-only.
+- `/gated-review` is the two-stage merge review: senior-engineer and the module owners (from a table you fill
+  in), then lead-engineer, then QA, then your word. `/tiered-review` is unchanged and stays the one-tier check.
+
+Fill in the "Fill in for your project" sections (board ids, module owners, ask-first list, merge rule) in the
+project's own copy, never in this public repo.
 
 **Licences.** Trail of Bits skills are CC-BY-SA-4.0; Ponytail, Agent Skills, wshobson and ECC are MIT. Every
 installed third-party skill folder holds its upstream `LICENSE`. A tailored override of a third-party file is a
@@ -190,6 +213,7 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 | `sources.lock` | Allowed sources and pins |
 | `packs.conf` | Which items each optional pack installs |
 | `agents/`, `commands/`, `skills/` | Role agents, `/tiered-review`, the memory commands and skills written here, installed only by packs |
+| `agents/{junior,mid,senior,lead}-dev.md`, `commands/gated-review.md`, `skills/project-manager/`, `skills/github-api/` | The `pm` pack: the four builders, the two-stage review, and the project-manager and GitHub skills |
 | `scripts/profile_save.sh` | Captures tailoring done in `./.claude` as a profile |
 | `scripts/*.py` | Two small helpers (fail-open hooks, marked `CLAUDE.md` blocks) |
 | `profiles/<name>/` | Saved tailoring for one product (created by `profile_save.sh`) |
@@ -244,8 +268,9 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh` prints the
-total; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 282 checks
+on 2026-11-01; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
+cloud-session results are manual.
 
 - Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
   stop on a tampered Ponytail hash (exit 1, nothing installed).
@@ -272,13 +297,21 @@ total; CI runs it on every pull request). They never touch the real `~/.claude` 
 - Packs: `--pack` without a value and unknown pack names refused before anything is installed; dry runs at both
   scopes change nothing, and without `--pack` nothing from the packs is planned; `--pack all` installs every
   item at user and project scope, each third-party copy with its `LICENSE`, no `CLAUDE_PLUGIN_ROOT` anywhere,
-  role agents limited to Read, Grep and Glob, valid frontmatter and unique names; a re-run is identical; a
-  default install has exactly the base skills from `sources.lock` and no pack item, and each pack installed on
-  its own adds exactly its items to that and removes nothing; an
+  role agents limited to Read, Grep and Glob and the four builders to exactly their six tools, valid frontmatter
+  and unique names; a re-run is identical; a default install has exactly the base skills from `sources.lock` and
+  no pack item, and each pack installed on its own adds exactly its items to that and removes nothing; an
   unfetchable Trail of Bits pin and a pinned skill that needs plugin-only features both stop with nothing
   installed; the snapshot covers the packs and `profile_save.sh` finds nothing to save; a profile saved with
   packs records them, keeps the `LICENSE` in a tailored third-party skill, and replays them without `--pack`;
   dropping the packs on a re-run prints a warning.
+
+- Agents and the `pm` pack (offline): every agent outside the builder allowlist has exactly
+  `tools: Read, Grep, Glob`; each of `junior-dev`, `mid-dev`, `senior-dev` and `lead-dev` has exactly `Read, Edit,
+  Write, Bash, Grep, Glob`, its default effort (medium, high, xhigh, max), and the text that it never reviews,
+  approves, QAs or merges and never pushes to `main`; every agent's frontmatter has exactly its allowed keys; the
+  four builders' Never and When blocked sections are identical; the owner's merge rule reads the same in the
+  project-manager skill (sections 2, 6 and 11), `/gated-review` and `docs/workflow.md`; `PACK_pm` lists exactly
+  its seven items, no other pack installs a builder, and `--pack pm` installs exactly those seven.
 
 - Memory (offline): `check.py` accepts the skill's own lesson and handoff examples and changes no file; names
   each format problem (duplicate or malformed id, missing or empty field, bad status, scope or count, undated
@@ -311,7 +344,8 @@ With packs, the same check covers this repo's skills and agents and every skill 
 for the run, and it also reads the `SKILL.md` of each installed pack skill. Names are matched whole, hyphens
 included. Upstream skills that mention siblings this repo does not install produce informational `WARN` lines;
 the role agents and domain skills written here mention only items of their own pack (or of the base toolkit),
-so they never do.
+so they never do. The `pm` pack's items also name items of `roles` and `memory`; installed with both, they never do
+either.
 
 ## Updating a pin
 
