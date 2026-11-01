@@ -10,9 +10,10 @@ What vibe-setup gives you, and what you add per project:
 | From vibe-setup (packs) | You add in each project |
 |---|---|
 | Reviewer agents (`senior-engineer`, `lead-engineer`, `mid-level-engineer`), read-only | Your module owners: one reviewer agent per risky module, also read-only |
-| `/tiered-review` | Which paths go to which owner, and which paths get the full gate |
+| Builder agents (`junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`, `pm` pack), the only ones with write tools | |
+| `/gated-review` (`pm` pack), the two-stage review; `/tiered-review` for a one-tier quick check | Which paths go to which owner, and which paths get the full gate |
 | `/pickup`, `/learn`, `/handoff` and `.agent-memory/` (`memory` pack) | `AGENTS.md` with the rules below, a spec (`SPEC.md`) and a task list |
-| Domain skills (packs) | A project-manager skill: your board ids, ask-first list and ticket flow |
+| `project-manager` and `github-api` skills (`pm` pack), and domain skills (packs) | The project-manager skill's "Fill in for your project" section: your board ids, module owners, ask-first list and merge rule |
 | | Ticket and bug templates (see [ticket-templates.md](ticket-templates.md)) |
 
 ## 1. Who does what
@@ -99,7 +100,7 @@ effort the lead set.
 
 ## 5. Reviews
 
-- **Two stages.** `/tiered-review` runs stage 1 (senior-engineer and every module owner the diff touches), then
+- **Two stages.** `/gated-review` runs stage 1 (senior-engineer and every module owner the diff touches), then
   stage 2 (lead-engineer). Specs, architecture decisions, plans and money code get the full gate: every owner the
   diff touches.
 - **One lead at a time.** Lead reviews run one after another, never two at once. Running two in parallel does not
@@ -158,10 +159,10 @@ These wait for the owner's word to merge. Name your own in `AGENTS.md` and in th
 
 ## 9. Adopting it in a new project
 
-1. Install vibe-setup at project scope with the `roles` and `memory` packs (see the README).
+1. Install vibe-setup at project scope with the `roles`, `memory` and `pm` packs (see the README).
 2. Write `AGENTS.md`: the working rules, the merge rule, the ask-first list, and the rules in sections 2 to 6.
-3. Add your module-owner agents (read-only) and their paths in `/tiered-review`.
+3. Add your module-owner agents (read-only) and their paths in `/gated-review` (its section 3).
 4. Copy the templates in [ticket-templates.md](ticket-templates.md) into `.github/ISSUE_TEMPLATE/`.
 5. Create the board with the Status values and the Iteration field above, then the views.
-6. Write the project-manager skill: your board ids, your ask-first list, and when it brings you a decision.
+6. Fill in the project-manager skill's last section: your board ids, module owners, ask-first list and merge rule.
 7. Save the tailoring as a profile only if nothing in it is confidential: this repo is public.
