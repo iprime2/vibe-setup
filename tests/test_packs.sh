@@ -31,6 +31,13 @@ PM_WANT="agents/junior-dev.md agents/lead-dev.md agents/mid-dev.md agents/senior
 fm() { awk -v k="$2" 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit } index($0, k ": ") == 1 { print substr($0, length(k) + 3) }' "$1" 2>/dev/null; }
 body() { awk 'NR == 1 && $0 == "---" { f = 1; next } f && $0 == "---" { f = 0; b = 1; next } b' "$1" 2>/dev/null; }
 body_has() { body "$1" | grep -qF -- "$2"; }
+# keys FILE: the frontmatter's key names, sorted. tail_of FILE: from "## Never" to the end (the builders' safety text).
+keys() { awk 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit } match($0, /^[A-Za-z_-]+:/) { print substr($0, 1, RLENGTH - 1) }' "$1" 2>/dev/null | LC_ALL=C sort | xargs; }
+tail_of() { sed -n '/^## Never$/,$p' "$1" 2>/dev/null; }
+# The owner's merge rule (2026-11-01), word for word wherever it is stated. flat FILE joins lines and squeezes spaces.
+MERGE_RULE="By default, every merge needs the owner's word in the session, quoted on the PR with its time. A project may switch on a rule in its \`AGENTS.md\` that lets the PM merge a clean PR at QA pass; a PR in an ask-first area always waits for the owner's word."
+flat() { tr '\n' ' ' < "$1" 2>/dev/null | tr -s ' '; }
+n_rule() { flat "$1" | grep -oF -- "$MERGE_RULE" | wc -l | tr -d ' '; }
 
 # Frontmatter: every skill and agent has a name (matching its folder or file) and a description,
 # names are unique per kind, and every command has a description.
@@ -85,6 +92,22 @@ for n in $BUILDERS; do
   check "$n: says it never reviews, approves, QAs or merges" body_has "$f" "Never review, approve, QA or merge"
   check "$n: says it never pushes to main" body_has "$f" 'Never push to `main`'
 done
+# No agent gains a privilege through another frontmatter key (model, permission mode, hooks, ...).
+for f in "$REPO"/agents/*.md; do
+  n="$(basename "$f" .md)"
+  if has_word "$BUILDERS" "$n"; then want="description effort name tools"; else want="description name tools"; fi
+  check "$n: frontmatter keys are exactly [$want]" test "$(keys "$f")" = "$want"
+done
+# The four builders carry one safety text: Never and When blocked are identical in every builder.
+check "junior-dev: its safety text runs from Never to When blocked" grep -qx '## When blocked' <(tail_of "$REPO/agents/junior-dev.md")
+for n in mid-dev senior-dev lead-dev; do
+  check "$n: its Never and When blocked sections match junior-dev's" diff <(tail_of "$REPO/agents/junior-dev.md") <(tail_of "$REPO/agents/$n.md")
+done
+
+echo "== the merge rule reads the same everywhere (offline)"
+check "project-manager states it in sections 2, 6 and 11" test "$(n_rule "$REPO/skills/project-manager/SKILL.md")" -eq 3
+check "/gated-review section 8 states it" test "$(n_rule "$REPO/commands/gated-review.md")" -eq 1
+check "docs/workflow.md states it" test "$(n_rule "$REPO/docs/workflow.md")" -eq 1
 
 echo "== the pm pack (offline)"
 check "packs.conf lists the pm pack" has_word "$ALL_PACKS" pm
