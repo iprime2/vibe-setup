@@ -86,7 +86,8 @@ stage 2 when you can. Run each agent at most once per round.
 ## 6. QA
 
 After both stages approve, a QA agent checks every acceptance criterion against the PR head. QA is read-only
-(`tools: Read, Grep, Glob`) and never the agent that built or reviewed the change. You run any command a criterion
+(`tools: Read, Grep, Glob`; Agent Skills' `test-engineer` qualifies once a profile limits it to those tools) and
+never the agent that built or reviewed the change. You run any command a criterion
 needs on that head and give QA the command, its output and the SHA; QA rules on each criterion: pass, fail, or
 needs the owner.
 

@@ -90,8 +90,10 @@ copies it into the ticket's Technical details as one line:
 
 `**Builder:** <level>, <tier> tier, effort <effort> (set by lead-engineer: <link to the verdict>)`
 
-The PM briefs that builder at exactly that tier and effort. If the work turns out larger or smaller, it goes back
-to the lead, who updates the line before the builder starts again. The table is what the lead chooses from:
+The lead-engineer agent does not add this line on its own: the readiness brief asks for it and gives the lead the
+table below. The PM briefs that builder at exactly that tier and effort. If the work turns out larger or smaller,
+it goes back to the lead, who updates the line before the builder starts again. The table is what the lead chooses
+from:
 
 | Complexity signals | Builder | Effort (default, lowest) | Skills to name in the brief |
 |---|---|---|---|
