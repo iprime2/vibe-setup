@@ -65,7 +65,7 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 
 | Pack | Written here | Third-party (pinned) |
 |---|---|---|
-| `roles` | agents `lead-engineer`, `senior-engineer`, `mid-level-engineer`; command `/tiered-review`; skill `system-design` | |
+| `roles` | agents `lead-engineer`, `senior-engineer`, `mid-level-engineer`, `ai-engineer`; command `/tiered-review`; skills `system-design`, `ai-engineer` | |
 | `quant` | `quant-researcher`, `quant-developer` | |
 | `systems` | `rust-developer`, `cpp-developer`, `low-latency-systems` | ToB `modern-cpp`; ECC `rust-patterns`, `rust-testing`, `cpp-testing` |
 | `web3` | `blockchain-developer`, `solidity-developer`, `web3-integration`, `crypto-custody-and-keys` | ToB `entry-point-analyzer`, and from building-secure-contracts: `secure-workflow-guide`, `guidelines-advisor`, `token-integration-analyzer`, `code-maturity-assessor`, `audit-prep-assistant`; ECC `evm-token-decimals`, `defi-amm-security` |
@@ -78,6 +78,9 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 The role agents are read-only (`tools: Read, Grep, Glob`). `/tiered-review` picks the tier from the diff
 (mid-level by default; senior for logic, concurrency, money or security; lead for new services, schemas,
 APIs and cross-service contracts), runs that agent, and follows its escalations. It does not replace `/review`.
+`ai-engineer` reviews the agent setup itself: `CLAUDE.md`, `AGENTS.md`, skills, agent files, commands, hooks and
+templates, for unclear or conflicting instructions, routing between agents, tool access, cost and the gates. Run
+it on a change to those files or when agents keep repeating a mistake. `/tiered-review` does not pick it.
 Everything here is generic: product-, employer- and country-specific rules belong in a profile.
 Agent Skills' own agents (`code-reviewer`, `security-auditor`, `test-engineer`, `web-performance-auditor`)
 inherit every tool unless a profile adds a `tools:` line; the crypto-exchange-np profile limits them to Read,
