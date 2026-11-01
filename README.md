@@ -76,9 +76,10 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 | `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup` (see "Memory and handoffs") | |
 | `pm` | skills `project-manager`, `github-api`; agents `junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`; command `/gated-review` (see "Project manager pack") | |
 
-The role agents are read-only (`tools: Read, Grep, Glob`); only the `pm` pack's builders write. `/tiered-review` picks the tier from the diff
-(mid-level by default; senior for logic, concurrency, money or security; lead for new services, schemas,
-APIs and cross-service contracts), runs that agent, and follows its escalations. It does not replace `/review`.
+The role agents are read-only (`tools: Read, Grep, Glob`); only the `pm` pack's builders write. `/tiered-review`
+picks the tier from the diff (mid-level by default; senior for logic, concurrency, money or security; lead for new
+services, schemas, APIs and cross-service contracts), runs that agent, and follows its escalations. It does not
+replace `/review`.
 `ai-engineer` reviews the agent setup itself: `CLAUDE.md`, `AGENTS.md`, skills, agent files, commands, hooks and
 templates, for unclear or conflicting instructions, routing between agents, tool access, cost and the gates. Run
 it on a change to those files or when agents keep repeating a mistake. `/tiered-review` does not pick it.
@@ -267,8 +268,9 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh` prints the
-total; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The cloud-session results are manual.
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 267 checks
+on 2026-11-01; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
+cloud-session results are manual.
 
 - Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
   stop on a tampered Ponytail hash (exit 1, nothing installed).
@@ -295,9 +297,9 @@ total; CI runs it on every pull request). They never touch the real `~/.claude` 
 - Packs: `--pack` without a value and unknown pack names refused before anything is installed; dry runs at both
   scopes change nothing, and without `--pack` nothing from the packs is planned; `--pack all` installs every
   item at user and project scope, each third-party copy with its `LICENSE`, no `CLAUDE_PLUGIN_ROOT` anywhere,
-  role agents limited to Read, Grep and Glob and the four builders to exactly their six tools, valid frontmatter and unique names; a re-run is identical; a
-  default install has exactly the base skills from `sources.lock` and no pack item, and each pack installed on
-  its own adds exactly its items to that and removes nothing; an
+  role agents limited to Read, Grep and Glob and the four builders to exactly their six tools, valid frontmatter
+  and unique names; a re-run is identical; a default install has exactly the base skills from `sources.lock` and
+  no pack item, and each pack installed on its own adds exactly its items to that and removes nothing; an
   unfetchable Trail of Bits pin and a pinned skill that needs plugin-only features both stop with nothing
   installed; the snapshot covers the packs and `profile_save.sh` finds nothing to save; a profile saved with
   packs records them, keeps the `LICENSE` in a tailored third-party skill, and replays them without `--pack`;
