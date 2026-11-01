@@ -13,7 +13,7 @@ What vibe-setup gives you, and what you add per project:
 | Builder agents (`junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`, `pm` pack), the only ones with write tools | |
 | `/gated-review` (`pm` pack), the two-stage review; `/tiered-review` for a one-tier quick check | Which paths go to which owner, and which paths get the full gate |
 | `/pickup`, `/learn`, `/handoff` and `.agent-memory/` (`memory` pack) | `AGENTS.md` with the rules below, a spec (`SPEC.md`) and a task list |
-| `project-manager` and `github-api` skills (`pm` pack), and domain skills (packs) | The project-manager skill's "Fill in for your project" section: your board ids, module owners, ask-first list and merge rule |
+| `project-manager` and `github-api` skills (`pm` pack), and domain skills (packs) | The project-manager skill's "Fill in for your project" section: your board ids, ask-first list, merge rule and builder writes; module owners and the QA agent go in `/gated-review` sections 3 and 9 |
 | | Ticket and bug templates (see [ticket-templates.md](ticket-templates.md)) |
 
 ## 1. Who does what

@@ -51,17 +51,17 @@ gh api repos/{owner}/{repo}/pulls/<n>/files --paginate --jq '.[].filename'
 ### 3.2 Write a body from a file, then read it back
 
 Write the text to a file outside the repository first, named for its PR or issue and the agent
-(`/tmp/pr-<n>-body.md`, `/tmp/pr-<n>-<agent>-review.json`) or made with `mktemp`: agents running in parallel share
-`/tmp`, and a fixed name posts one agent's text under another's signature, which the read-back cannot catch.
+(`/tmp/pr-<branch>-body.md`, `/tmp/pr-<n>-<agent>-review.json`) or made with `mktemp`: agents running in parallel
+share `/tmp`, and a fixed name posts one agent's text under another's signature, which the read-back cannot catch.
 `-F key=@file` reads the value from the file, so quotes, backticks and newlines survive; `-f key=value` sends a
 literal string.
 
 ```sh
 gh api -X POST repos/{owner}/{repo}/pulls -f title='<title>' -f head='<branch>' -f base='<default branch>' \
   -F body=@/tmp/pr-<branch>-body.md
-gh api -X PATCH repos/{owner}/{repo}/pulls/<n> -F body=@/tmp/pr-<n>-body.md
+gh api -X PATCH repos/{owner}/{repo}/pulls/<n> -F body=@/tmp/pr-<branch>-body.md
 gh api -X POST repos/{owner}/{repo}/issues/<n>/comments -F body=@/tmp/issue-<n>-<agent>-comment.md   # issues and PRs alike
-gh api repos/{owner}/{repo}/pulls/<n> --jq .body > /tmp/pr-<n>-body.read && diff /tmp/pr-<n>-body.md /tmp/pr-<n>-body.read
+gh api repos/{owner}/{repo}/pulls/<n> --jq .body > /tmp/pr-<branch>-body.read && diff /tmp/pr-<branch>-body.md /tmp/pr-<branch>-body.read
 ```
 
 Always read back after writing. Some proxies and integrations rewrite a body on the way, for example a PR's

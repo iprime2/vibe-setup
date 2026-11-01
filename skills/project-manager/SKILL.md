@@ -50,7 +50,9 @@ green") covers only the PRs open when it was said, and "green" means the whole g
 
 **Always the owner's:**
 - **The merge of a PR in an ask-first area** (section 11). The ask-first list holds back the merge, not the work:
-  the work goes ahead as usual, and an S1 fix starts at once (section 3).
+  the work goes ahead as usual, and an S1 fix starts at once (section 3). Builders still stop for the public or
+  irreversible actions in their Never list, adding a dependency or an external host or service among them; bring
+  each one to the owner, who does it or allows it with a rule in `AGENTS.md`.
 - **Scope, cost and product;** spec and design decisions; accepting a residual risk.
 - **Manual QA:** a `qa:manual` item, and removing that label.
 - **Moving a card to Done.**
@@ -127,9 +129,10 @@ from:
 - **The brief.** Brief every agent like a peer that knows nothing: the goal and the ticket; the agent's name,
   tier and effort; the worktree, branch, base and head SHA; the files and line ranges worth reading; what is
   ruled out; the skills to load; for a builder, what it may do (commit, push its branch, open the PR) and the
-  `AGENTS.md` rule that allows it, quoted with the owner's words (your own say-so never counts, and you never
-  pass consent on); and the exact report wanted back, short, with file:line. If your agent tool cannot set the
-  effort, write it in the brief and say so in the gate record. Never let an agent review or QA its own work.
+  `AGENTS.md` rule that allows it, quoted with the owner's words that trigger it (the rule is what allows the write;
+  your own say-so never counts); and the exact report wanted back, short, with file:line. If your agent tool cannot
+  set the effort, write it in the brief and say so in the gate record. Never let an agent review or QA its own
+  work.
 - **Parallel work.** Independent builders run in parallel, each in its own worktree. Work that depends on order
   stays sequential, and lead reviews always do (`/gated-review` section 4).
 
@@ -214,14 +217,14 @@ holds none of them.
 - **Board:** the Project's owner and number, the Status field with its options (Backlog, Todo, In progress, In
   review, QA, PO review, Done), and the Iteration field. Read the ids with the connector; do not guess them.
 - **Module owners:** fill in `/gated-review` section 3's table only; this skill reads it there and keeps no copy.
-- **Ask-first list:** by default money and balances (payments, payouts, fees and limits); keys, signing,
+- **Ask-first list:** by default money and balances (ledgers, payments, payouts, fees and limits); keys, signing,
   authentication, permissions and secrets; personal data and compliance checks; CI workflows, required checks,
   branch protection, dependency and secret-scanning config; the spec and design decisions; a new dependency,
   external host, data source or third-party service; publishing, deleting, changing repositories and migrations
   that have run; any item that needs manual QA. The list holds back the merge, not the work (section 2).
 - **Builder writes:** the rule in the project's `AGENTS.md` that lets a builder commit, push its task branch and
   open its PR (for example the owner's `/build` or explicit ask for that ticket). Each brief quotes it and the
-  owner's words; the PM's own say-so never counts, and consent is never passed on.
+  owner's words that trigger it; the rule is what allows the write, and the PM's own say-so never counts.
 - **Merge rule:** By default, every merge needs the owner's word in the session, quoted on the PR with its time. A
   project may switch on a rule in its `AGENTS.md` that lets the PM merge a clean PR at QA pass; a PR in an
   ask-first area always waits for the owner's word. Write down whether the project switches it on, and where in
