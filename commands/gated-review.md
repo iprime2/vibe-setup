@@ -8,8 +8,9 @@ You orchestrate. The reviewers and QA are read-only agents that cannot run git o
 change, run what they need, and hand it to them. Every PR goes through this gate, docs, specs, design decisions
 and plans included.
 
-This command needs the `senior-engineer` and `lead-engineer` agents (the `roles` pack) and the project's module
-owner agents named in section 3. If one that the change calls for is not installed, stop and name it. The
+This command needs the `senior-engineer` and `lead-engineer` agents (the `roles` pack), the project's module
+owner agents named in section 3, and the QA agent named in section 9. If one that the change calls for is not
+installed, or the QA agent's `tools:` line is not exactly `Read, Grep, Glob`, stop and name it. The
 project's `AGENTS.md` wins over this file. `/tiered-review` is unchanged: it picks one tier for a quick check and
 is not a merge review.
 
@@ -41,12 +42,15 @@ Stage 2 runs in both. Say which gate ran, and quote the paths or diff lines that
 ## 3. Stage 1: senior engineer and module owners
 
 Always run **senior-engineer**. Add the owners the gate calls for, from this table. The project fills it in
-(section 9); until it does, stage 1 is senior-engineer alone, and the report says so.
+(section 9). A row whose Module cell is in angle brackets is a placeholder: ignore it. If no other row exists,
+stage 1 is senior-engineer alone, and the report says "no module owners configured".
 
 | Module | Paths | Owner agents | Or the diff touches |
 |---|---|---|---|
 | `<module>` | `<path/>`, `<path/>` | `<module>-owner` | `<topics that route here from any path>` |
-| example: auth | `src/auth/` | `auth-owner` | sessions, tokens, permissions |
+
+For example, a row `auth | src/auth/ | auth-owner | sessions, tokens, permissions` sends every change under
+`src/auth/`, and any change about sessions, tokens or permissions, to `auth-owner`.
 
 Specs, design decisions and plans go to the owners whose topics they name, using the same table.
 
@@ -85,11 +89,10 @@ stage 2 when you can. Run each agent at most once per round.
 
 ## 6. QA
 
-After both stages approve, a QA agent checks every acceptance criterion against the PR head. QA is read-only
-(`tools: Read, Grep, Glob`; Agent Skills' `test-engineer` qualifies once a profile limits it to those tools) and
-never the agent that built or reviewed the change. You run any command a criterion
-needs on that head and give QA the command, its output and the SHA; QA rules on each criterion: pass, fail, or
-needs the owner.
+After both stages approve, the QA agent named in section 9 checks every acceptance criterion against the PR
+head. QA is read-only (`tools: Read, Grep, Glob`) and never the agent that built or reviewed the change. You run
+any command a criterion needs on that head and give QA the command, its output and the SHA; QA rules on each
+criterion: pass, fail, or needs the owner.
 
 - A criterion only a person can check (a device, an account, a judgment call) is labelled `qa:manual` (the name
   is the project's choice), and the owner QAs it. Only the owner's word, quoted in the QA record, clears it.
@@ -117,9 +120,12 @@ needs the owner.
   (quote the lead's or the owner's ruling), or carried to a named follow-up that is not another open PR.
 - **Gate record.** One signed PR comment with one line per agent (agent, tier, verdict, blocking items), the QA
   result and CI, all at the same head SHA.
-- **The owner's word.** Before a merge, a second comment quotes the owner's approval word for word, with its
-  time. A standing word ("merge these once green") covers only the PRs open when it was said, and "green" means
-  this whole gate, not only CI.
+- **The owner's word.** By default, every merge needs the owner's word in the session, quoted on the PR with its
+  time. A project may switch on a rule in its `AGENTS.md` that lets the PM merge a clean PR at QA pass; a PR in an
+  ask-first area always waits for the owner's word. Clean means every other box below is ticked. Before a merge, a
+  second comment quotes the owner's approval word for word with its time, or, under the rule, quotes the rule. A
+  standing word ("merge these once green") covers only the PRs open when it was said, and "green" means this
+  whole gate, not only CI.
 - **A new push** resets the gate: CI and QA run again on the new head, and the change is reviewed again. When the
   interdiff leaves the reviewed change as it was (a merge of `main` with no conflicts), that review is the same
   lead's delta check of the interdiff; otherwise the changed hunks go through stage 1 and stage 2 again.
@@ -132,7 +138,8 @@ End the report with the merge gate:
 - [ ] QA passed on the head SHA, and every `qa:manual` item has been QA'd by the owner, quoted on the PR
 - [ ] Every review thread has a reply and is resolved
 - [ ] The verdicts, the QA result and the gate record are posted on the PR, each signed
-- [ ] The owner gave the word to merge, quoted with its time. The merge is a squash pinned to the head SHA.
+- [ ] The owner's word, or the project's `AGENTS.md` merge rule for a PR outside the ask-first list, quoted (the
+  word with its time). The merge is a squash pinned to the head SHA.
 
 Do not change code here; fixes go back to the builder that wrote the change.
 
@@ -144,4 +151,7 @@ Keep these in the project's copy of this file, or point to where `AGENTS.md` hol
   every money or core-data path.
 - **The module table** in section 3: one row per risky module, each with a read-only owner agent.
 - **Required CI checks:** the job names that must pass on the head.
-- **The merge rule:** who presses merge, and on whose word.
+- **The merge rule:** whether the project's `AGENTS.md` switches on the rule in section 8 that lets the PM merge
+  a clean PR at QA pass outside the ask-first list. Without it, every merge waits for the owner's word.
+- **The QA agent:** the read-only agent that runs section 6. This toolkit ships none; Agent Skills'
+  `test-engineer` qualifies only once a profile gives it `tools: Read, Grep, Glob`.
