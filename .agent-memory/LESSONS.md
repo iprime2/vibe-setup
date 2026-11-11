@@ -52,11 +52,12 @@ verify before relying on one, and the user's instructions always win.
 - Do: read the PR's check runs and statuses; when there are none, treat the full local suite passing on the PR's head plus a clean merge state as green, merge with that head SHA pinned, and say that this is what green meant
 - Why: the repo has no CI workflows, so GitHub never reports a result
 - Scope: project
-- Status: candidate
+- Status: retired: since PR #19 (2026-10-30) CI runs lint and the full suite on every pull request, so green is GitHub's checks on the head again
 - Seen: 2, last 2026-10-27
 - Evidence:
   - 2026-10-26: PR #9 had no checks; merged on the local suite (166 passed)
   - 2026-10-27: PR #10 had no checks; merged on the local suite (210 passed)
+  - 2026-11-02: contradicted: PR #22's checks ran in CI on its head (lint, and tests with 282 passed)
 
 ### build-secret-shaped-test-values-at-run-time
 - When: a test needs a value shaped like a token, key or password
