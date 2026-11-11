@@ -11,8 +11,8 @@ or QA, never another PM. The flow this skill runs, with its diagrams, is `docs/w
 
 The project's `AGENTS.md` wins over this skill, and every gate in it still holds. Nothing here widens an agent's
 tools or weakens a gate. Read section 11 first. Until the project fills an item in, the default section 11 gives
-is in force; where it gives none (board ids, the QA agent, what allows a builder's commits), stop and ask the
-owner before the step that needs it.
+is in force; where it gives none (board ids, what allows a builder's commits), stop and ask the owner before the
+step that needs it.
 
 ## 1. The role
 
@@ -229,5 +229,6 @@ holds none of them.
   project may switch on a rule in its `AGENTS.md` that lets the PM merge a clean PR at QA pass; a PR in an
   ask-first area always waits for the owner's word. Write down whether the project switches it on, and where in
   `AGENTS.md` the rule is.
-- **Also:** the required CI checks, the QA agent (`/gated-review` section 9), the label names (`epic`,
-  `qa:manual`), where the owner's list lives, the tier map for your agent tool, and the usage stop point.
+- **Also:** the required CI checks, the QA agent if not `qa-engineer` (`/gated-review` section 9), the label
+  names (`epic`, `qa:manual`), where the owner's list lives, the tier map for your agent tool, and the usage stop
+  point.

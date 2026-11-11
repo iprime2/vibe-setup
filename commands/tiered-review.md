@@ -1,11 +1,14 @@
 ---
-description: Tiered code review - picks the mid-level, senior or lead reviewer from what the diff touches, runs that read-only agent, and follows its escalations. Separate from /review, the single-pass five-axis review.
+description: Tiered code review, a quick check before a PR is opened - picks the mid-level, senior or lead reviewer from what the diff touches, runs that read-only agent, and follows its escalations. Not a merge gate - with the pm pack, /gated-review is. Separate from /review, the single-pass five-axis review.
 argument-hint: "[base-ref] [--tier mid|senior|lead]"
 ---
 
 Review the current change with the reviewer tier it needs. You orchestrate; the reviewers are the
 mid-level-engineer, senior-engineer and lead-engineer agents. They are read-only and cannot run git, so you
 collect the change and hand it to them.
+
+This is a quick check, not a merge gate: its verdict never makes a PR ready to merge. With the `pm` pack,
+`/gated-review` is the merge gate; without it, the merge rule is the project's own (by default, your word).
 
 ## 1. Collect the change
 
