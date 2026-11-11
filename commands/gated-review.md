@@ -1,5 +1,5 @@
 ---
-description: Two-stage merge review - stage 1 runs senior-engineer and every module owner the diff touches (routed by path from a table the project fills in), stage 2 runs lead-engineer, then QA (qa-engineer), then the owner's word. The one merge gate for a PR. /tiered-review, /review, /code-review and /security-review are checks before or beside it, never a merge gate.
+description: Two-stage merge review - stage 1 runs senior-engineer and every module owner the diff touches (routed by path from a table the project fills in), stage 2 runs lead-engineer, then QA (qa-engineer), then the owner's word. The one merge gate for a PR. /tiered-review, /review and Claude Code's built-in review commands are checks before or beside it, never a merge gate.
 argument-hint: "[base-ref]"
 ---
 
@@ -15,13 +15,14 @@ not exactly `Read, Grep, Glob`, stop and name it. The project's `AGENTS.md` wins
 
 This is the only merge gate. The other review commands are checks before or beside it, and none of them makes a
 PR ready to merge: `/tiered-review` (one reviewer tier, a quick check before a PR is opened), `/review` (Agent
-Skills' single-pass five-axis review), and Claude Code's built-in `/code-review` and `/security-review`. Their
+Skills' single-pass five-axis review), and Claude Code's built-in code and security review commands. Their
 findings can feed a PR; the merge still waits for this gate.
 
 ## 1. Collect the change
 
-- Base, in this order: the `base-ref` argument; else the PR's base commit if a PR exists
-  (`gh api repos/{owner}/{repo}/pulls/<n> --jq .base.sha`); else `git fetch origin`, then
+- Base, in this order: the `base-ref` argument; else the PR's base commit if a PR exists (`pull_request_read`
+  method `get`, or `gh api repos/{owner}/{repo}/pulls/<n> --jq .base.sha`; the `github-api` skill's section 1 says
+  which); else `git fetch origin`, then
   `git merge-base HEAD origin/main`; else `origin/master`. Never use a local `main` without fetching first.
 - Print the base and `git diff --stat <base>...HEAD`. If more than 30 files changed, ask the owner to confirm the
   base before starting any agent. If HEAD has no commits beyond the base, review the working tree
@@ -94,9 +95,12 @@ stage 2 when you can. Run each agent at most once per round.
 ## 6. QA
 
 After both stages approve, the QA agent named in section 9 (`qa-engineer` by default) checks every acceptance
-criterion against the PR head. QA is read-only (`tools: Read, Grep, Glob`) and never the agent that built or reviewed the change. You run
-any command a criterion needs on that head and give QA the command, its output and the SHA; QA rules on each
-criterion: pass, fail, or needs the owner.
+criterion against the PR head. QA is read-only (`tools: Read, Grep, Glob`) and never the agent that built or
+reviewed the change. You run every command a criterion needs on that head, then give QA the ticket and its
+acceptance criteria, the PR body, the head SHA, the diff or the changed files, and each command with its output.
+QA rules on each criterion (pass, fail, needs the owner, or not judged) and returns PASS, FAIL, INCOMPLETE or
+NEEDS THE OWNER. INCOMPLETE is not a pass: supply what its "Not judged" list names, from the same head, and run QA
+again.
 
 - A criterion only a person can check (a device, an account, a judgment call) is labelled `qa:manual` (the name
   is the project's choice), and the owner QAs it. Only the owner's word, quoted in the QA record, clears it.

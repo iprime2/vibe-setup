@@ -114,7 +114,6 @@ check "/gated-review says it is the only merge gate" body_has "$REPO/commands/ga
 check "/tiered-review's description says it is not a merge gate" bash -c "grep -q '^description:.*Not a merge gate' '$REPO/commands/tiered-review.md'"
 check "/gated-review names qa-engineer as the default QA agent" body_has "$REPO/commands/gated-review.md" 'The default is `qa-engineer` (the `pm` pack).'
 check "qa-engineer ships in the pm pack" has_word "$(packvar PACK_pm)" agent:qa-engineer
-check "qa-engineer is read-only" test "$(fm "$REPO/agents/qa-engineer.md" tools)" = "Read, Grep, Glob"
 
 echo "== the pm pack (offline)"
 check "packs.conf lists the pm pack" has_word "$ALL_PACKS" pm
@@ -155,6 +154,7 @@ echo "== user-scope install with every pack"
 capture bash "$REPO/bootstrap.sh" --pack all
 expect_rc "install exits 0" 0
 show_warns
+INSTALL_OUT="$OUT"   # the frontmatter check below replaces $OUT; the reference check needs this install's WARN lines
 C="$HOME/.claude"
 n=$(count "$C/skills"); want=$((NSKILLS + 1 + NPSKILLS))
 if [ "$n" -eq "$want" ]; then ok "skills: $want (base, graphify and $NPSKILLS from packs)"; else bad "skills: $n, wanted $want"; fi
@@ -182,8 +182,8 @@ capture python3 -I "$W/frontmatter.py" "$C"
 expect_rc "frontmatter is valid and names are unique" 0
 # This repo's items must not mention anything that the full install leaves out
 OURS="$(for it in $ALL_ITEMS; do case "$it" in skill:*|agent:*|command:*) item_path "" "$it" | sed 's|^/||' ;; esac; done | paste -sd'|' -)"
-if printf '%s\n' "$OUT" | grep '^WARN' | grep -qE "($OURS)"; then
-  bad "an item of this repo mentions something that is not installed"; printf '%s\n' "$OUT" | grep '^WARN' | grep -E "($OURS)" | sed 's/^/    /'
+if printf '%s\n' "$INSTALL_OUT" | grep '^WARN' | grep -qE "($OURS)"; then
+  bad "an item of this repo mentions something that is not installed"; printf '%s\n' "$INSTALL_OUT" | grep '^WARN' | grep -E "($OURS)" | sed 's/^/    /'
 else ok "no item of this repo mentions something that is not installed"; fi
 
 echo "== re-running is idempotent"

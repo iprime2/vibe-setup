@@ -109,8 +109,8 @@ bootstrap prints informational `WARN` lines for the items it names from them.
   They never review, approve, QA or merge, and never push to `main`. A test pins their tools and keeps every other
   agent written here read-only.
 - `qa-engineer` is the read-only QA agent `/gated-review` uses by default: it checks every acceptance criterion
-  against the PR's head, from the code, the tests and the command output it is given, and rules pass, fail or
-  needs the owner for each.
+  against the PR's head, from the code, the tests and the command output it is given, and rules pass, fail,
+  needs the owner or not judged for each (a criterion not judged makes the result INCOMPLETE, never a pass).
 - `/gated-review` is the merge gate: senior-engineer and the module owners (from a table you fill in), then
   lead-engineer, then `qa-engineer`, then your word.
 

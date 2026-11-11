@@ -25,7 +25,7 @@ What vibe-setup gives you, and what you add per project:
 | **lead-engineer** | Reviews every ticket for readiness and sets its builder, tier and effort. Stage 2 of every PR. Rules when reviewers, specs or architecture decisions disagree. |
 | **Module owners** | Readiness of tickets in their module. Stage 1 review of their module's code and specs. |
 | **senior-engineer** | Stage 1 line-by-line review of every PR. |
-| **QA agent** (`qa-engineer`, `pm` pack) | Checks every acceptance criterion against the PR's head commit and posts the result. |
+| **QA agent** (`qa-engineer`, `pm` pack) | Checks every acceptance criterion against the PR's head commit; the project manager posts its result. |
 | **Builders** | Build test-first on a task branch, open the PR linked to its ticket, and fix their own findings. They never review, approve, QA or merge. |
 
 Reviewers and QA stay read-only (`tools: Read, Grep, Glob`). An agent never reviews or QAs its own work.
