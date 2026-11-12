@@ -11,9 +11,9 @@ What vibe-setup gives you, and what you add per project:
 |---|---|
 | Reviewer agents (`senior-engineer`, `lead-engineer`, `mid-level-engineer`), read-only | Your module owners: one reviewer agent per risky module, also read-only |
 | Builder agents (`junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`, `pm` pack), the only ones with write tools | |
-| `/gated-review` (`pm` pack), the two-stage review; `/tiered-review` for a one-tier quick check | Which paths go to which owner, and which paths get the full gate |
+| `/gated-review` (`pm` pack), the one merge gate; `/tiered-review` for a one-tier quick check before a PR | Which paths go to which owner, and which paths get the full gate |
 | `/pickup`, `/learn`, `/handoff` and `.agent-memory/` (`memory` pack) | `AGENTS.md` with the rules below, a spec (`SPEC.md`) and a task list |
-| `project-manager` and `github-api` skills (`pm` pack), and domain skills (packs) | The project-manager skill's "Fill in for your project" section: your board ids, ask-first list, merge rule and builder writes; module owners and the QA agent go in `/gated-review` sections 3 and 9 |
+| `project-manager` and `github-api` skills (`pm` pack), and domain skills (packs) | The project-manager skill's "Fill in for your project" section: your board ids, ask-first list, merge rule and builder writes; module owners go in `/gated-review` section 3, and another QA agent in section 9 only if you replace `qa-engineer` |
 | | Ticket and bug templates (see [ticket-templates.md](ticket-templates.md)) |
 
 ## 1. Who does what
@@ -25,7 +25,7 @@ What vibe-setup gives you, and what you add per project:
 | **lead-engineer** | Reviews every ticket for readiness and sets its builder, tier and effort. Stage 2 of every PR. Rules when reviewers, specs or architecture decisions disagree. |
 | **Module owners** | Readiness of tickets in their module. Stage 1 review of their module's code and specs. |
 | **senior-engineer** | Stage 1 line-by-line review of every PR. |
-| **QA agent** | Checks every acceptance criterion against the PR's head commit and posts the result. |
+| **QA agent** (`qa-engineer`, `pm` pack) | Checks every acceptance criterion against the PR's head commit; the project manager posts its result. |
 | **Builders** | Build test-first on a task branch, open the PR linked to its ticket, and fix their own findings. They never review, approve, QA or merge. |
 
 Reviewers and QA stay read-only (`tools: Read, Grep, Glob`). An agent never reviews or QAs its own work.
@@ -167,5 +167,6 @@ These wait for the owner's word to merge. Name your own in `AGENTS.md` and in th
 4. Copy the templates in [ticket-templates.md](ticket-templates.md) into `.github/ISSUE_TEMPLATE/`.
 5. Create the board with the Status values and the Iteration field above, then the views.
 6. Fill in the project-manager skill's last section: your board ids, ask-first list, merge rule and builder
-   writes (module owners and the QA agent live in `/gated-review` sections 3 and 9).
+   writes (module owners live in `/gated-review` section 3; the QA agent is `qa-engineer` unless you name another
+   in section 9).
 7. Save the tailoring as a profile only if nothing in it is confidential: this repo is public.

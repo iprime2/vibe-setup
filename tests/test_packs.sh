@@ -26,7 +26,7 @@ BUILDERS="junior-dev mid-dev senior-dev lead-dev"
 BUILDER_TOOLS="Read, Edit, Write, Bash, Grep, Glob"
 effort_of() { case "$1" in junior-dev) echo medium ;; mid-dev) echo high ;; senior-dev) echo xhigh ;; lead-dev) echo max ;; esac; }
 # The pm pack's items, as installed paths in C-locale order.
-PM_WANT="agents/junior-dev.md agents/lead-dev.md agents/mid-dev.md agents/senior-dev.md commands/gated-review.md skills/github-api skills/project-manager"
+PM_WANT="agents/junior-dev.md agents/lead-dev.md agents/mid-dev.md agents/qa-engineer.md agents/senior-dev.md commands/gated-review.md skills/github-api skills/project-manager"
 # fm FILE KEY: every value of KEY in FILE's frontmatter, one per line. body FILE: the text after the frontmatter.
 fm() { awk -v k="$2" 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit } index($0, k ": ") == 1 { print substr($0, length(k) + 3) }' "$1" 2>/dev/null; }
 body() { awk 'NR == 1 && $0 == "---" { f = 1; next } f && $0 == "---" { f = 0; b = 1; next } b' "$1" 2>/dev/null; }
@@ -109,10 +109,16 @@ check "project-manager states it in sections 2, 6 and 11" test "$(n_rule "$REPO/
 check "/gated-review section 8 states it" test "$(n_rule "$REPO/commands/gated-review.md")" -eq 1
 check "docs/workflow.md states it" test "$(n_rule "$REPO/docs/workflow.md")" -eq 1
 
+echo "== one merge gate, and its QA agent ships (offline)"
+check "/gated-review says it is the only merge gate" body_has "$REPO/commands/gated-review.md" "This is the only merge gate."
+check "/tiered-review's description says it is not a merge gate" bash -c "grep -q '^description:.*Not a merge gate' '$REPO/commands/tiered-review.md'"
+check "/gated-review names qa-engineer as the default QA agent" body_has "$REPO/commands/gated-review.md" 'The default is `qa-engineer` (the `pm` pack).'
+check "qa-engineer ships in the pm pack" has_word "$(packvar PACK_pm)" agent:qa-engineer
+
 echo "== the pm pack (offline)"
 check "packs.conf lists the pm pack" has_word "$ALL_PACKS" pm
 pm_items="$(for it in $(packvar PACK_pm); do case "$it" in agent:*) echo "agents/${it#*:}.md" ;; command:*) echo "commands/${it#*:}.md" ;; *) echo "skills/${it#*:}" ;; esac; done | LC_ALL=C sort | xargs)"
-if [ "$pm_items" = "$PM_WANT" ]; then ok "PACK_pm lists exactly its seven items"; else bad "PACK_pm: [$pm_items], wanted [$PM_WANT]"; fi
+if [ "$pm_items" = "$PM_WANT" ]; then ok "PACK_pm lists exactly its eight items"; else bad "PACK_pm: [$pm_items], wanted [$PM_WANT]"; fi
 leak=""; for p in $ALL_PACKS; do [ "$p" = pm ] && continue; for it in $(packvar "PACK_$p"); do
   case "$it" in agent:*) has_word "$BUILDERS" "${it#*:}" && leak="$leak $p:$it" ;; esac; done; done
 if [ -z "$leak" ]; then ok "no other pack installs a builder"; else bad "builders outside the pm pack:$leak"; fi
@@ -148,6 +154,7 @@ echo "== user-scope install with every pack"
 capture bash "$REPO/bootstrap.sh" --pack all
 expect_rc "install exits 0" 0
 show_warns
+INSTALL_OUT="$OUT"   # the frontmatter check below replaces $OUT; the reference check needs this install's WARN lines
 C="$HOME/.claude"
 n=$(count "$C/skills"); want=$((NSKILLS + 1 + NPSKILLS))
 if [ "$n" -eq "$want" ]; then ok "skills: $want (base, graphify and $NPSKILLS from packs)"; else bad "skills: $n, wanted $want"; fi
@@ -175,8 +182,8 @@ capture python3 -I "$W/frontmatter.py" "$C"
 expect_rc "frontmatter is valid and names are unique" 0
 # This repo's items must not mention anything that the full install leaves out
 OURS="$(for it in $ALL_ITEMS; do case "$it" in skill:*|agent:*|command:*) item_path "" "$it" | sed 's|^/||' ;; esac; done | paste -sd'|' -)"
-if printf '%s\n' "$OUT" | grep '^WARN' | grep -qE "($OURS)"; then
-  bad "an item of this repo mentions something that is not installed"; printf '%s\n' "$OUT" | grep '^WARN' | grep -E "($OURS)" | sed 's/^/    /'
+if printf '%s\n' "$INSTALL_OUT" | grep '^WARN' | grep -qE "($OURS)"; then
+  bad "an item of this repo mentions something that is not installed"; printf '%s\n' "$INSTALL_OUT" | grep '^WARN' | grep -E "($OURS)" | sed 's/^/    /'
 else ok "no item of this repo mentions something that is not installed"; fi
 
 echo "== re-running is idempotent"
@@ -217,7 +224,7 @@ for p in $ALL_PACKS; do
   fi
 done
 pm_added="$( [ -f "$W/pack-pm.names" ] && LC_ALL=C comm -13 "$W/base.names" "$W/pack-pm.names" | xargs)"
-if [ "$pm_added" = "$PM_WANT" ]; then ok "--pack pm installs exactly the project-manager and github-api skills, the four builders and /gated-review"
+if [ "$pm_added" = "$PM_WANT" ]; then ok "--pack pm installs exactly the project-manager and github-api skills, the four builders, qa-engineer and /gated-review"
 else bad "--pack pm installed [$pm_added], wanted [$PM_WANT]"; fi
 
 echo "== a Trail of Bits pin that cannot be fetched stops with nothing installed"

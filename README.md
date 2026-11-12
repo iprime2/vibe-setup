@@ -74,7 +74,7 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 | `mobile` | `react-native-expo` | ECC `react-native-patterns` |
 | `ops` | | wshobson `prometheus-configuration`, `postmortem-writing` |
 | `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup` (see "Memory and handoffs") | |
-| `pm` | skills `project-manager`, `github-api`; agents `junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`; command `/gated-review` (see "Project manager pack") | |
+| `pm` | skills `project-manager`, `github-api`; agents `junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`, `qa-engineer`; command `/gated-review` (see "Project manager pack") | |
 
 The role agents are read-only (`tools: Read, Grep, Glob`); of the agents written here, only the `pm` pack's
 builders write (Agent Skills' own agents are covered below). `/tiered-review` picks the tier from the diff
@@ -99,19 +99,35 @@ bootstrap prints informational `WARN` lines for the items it names from them.
 - `project-manager` makes the session that talks with you the project manager. It writes and readies tickets,
   briefs the builder the lead names at the tier and effort the lead sets, drives each PR through review and QA,
   keeps the board, and brings you every decision that is yours. It never builds or reviews.
-- `github-api` holds its recipes: REST through `gh api repos/{owner}/{repo}/...`, which works where GraphQL is
-  blocked, plus reviews pinned to the head, review threads, sub-issues and board fields through a Projects
-  connector. Claims it could not check are marked **verify**.
+- `github-api` holds its recipes: the GitHub MCP server's tools first (the way a cloud session reaches GitHub),
+  with `gh api repos/{owner}/{repo}/...` as the fallback on your own machine and in CI; reviews pinned to the head,
+  review threads, sub-issues, job logs and board fields through a Projects connector. Each MCP tool is marked
+  "used" if it was called that way in a cloud session, and **verify** otherwise.
 - `junior-dev`, `mid-dev`, `senior-dev` and `lead-dev` are builders, and the only agents here with write tools
   (`Read, Edit, Write, Bash, Grep, Glob`). Each has a default `effort` in its frontmatter (medium, high, xhigh,
   max) and states it in its body; whether a harness reads `effort` from agent frontmatter is not tested here.
   They never review, approve, QA or merge, and never push to `main`. A test pins their tools and keeps every other
   agent written here read-only.
-- `/gated-review` is the two-stage merge review: senior-engineer and the module owners (from a table you fill
-  in), then lead-engineer, then QA, then your word. `/tiered-review` is unchanged and stays the one-tier check.
+- `qa-engineer` is the read-only QA agent `/gated-review` uses by default: it checks every acceptance criterion
+  against the PR's head, from the code, the tests and the command output it is given, and rules pass, fail,
+  needs the owner or not judged for each (a criterion not judged makes the result INCOMPLETE, never a pass).
+- `/gated-review` is the merge gate: senior-engineer and the module owners (from a table you fill in), then
+  lead-engineer, then `qa-engineer`, then your word.
 
 Fill in the "Fill in for your project" sections (board ids, module owners, ask-first list, merge rule) in the
 project's own copy, never in this public repo.
+
+**Which review to run.** There is one merge gate; everything else is a check before or beside it.
+
+| Command | From | What it is | Merge gate? |
+|---|---|---|---|
+| `/gated-review` | `pm` pack | Two stages of reviewers, then QA, then your word | **Yes, the only one** |
+| `/tiered-review` | `roles` pack | One reviewer tier picked from the diff; a quick check before a PR is opened | No |
+| `/review` | Agent Skills (base) | Single-pass five-axis review | No |
+| `/code-review`, `/security-review` | Claude Code built-ins | Ad hoc checks of the current change | No |
+
+Without the `pm` pack there is no merge-gate command: merge on your own word (or your project's rule), after
+whichever checks you ran.
 
 **Licences.** Trail of Bits skills are CC-BY-SA-4.0; Ponytail, Agent Skills, wshobson and ECC are MIT. Every
 installed third-party skill folder holds its upstream `LICENSE`. A tailored override of a third-party file is a
@@ -213,7 +229,7 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 | `sources.lock` | Allowed sources and pins |
 | `packs.conf` | Which items each optional pack installs |
 | `agents/`, `commands/`, `skills/` | Role agents, `/tiered-review`, the memory commands and skills written here, installed only by packs |
-| `agents/{junior,mid,senior,lead}-dev.md`, `commands/gated-review.md`, `skills/project-manager/`, `skills/github-api/` | The `pm` pack: the four builders, the two-stage review, and the project-manager and GitHub skills |
+| `agents/{junior,mid,senior,lead}-dev.md`, `agents/qa-engineer.md`, `commands/gated-review.md`, `skills/project-manager/`, `skills/github-api/` | The `pm` pack: the four builders, the QA agent, the merge gate, and the project-manager and GitHub skills |
 | `scripts/profile_save.sh` | Captures tailoring done in `./.claude` as a profile |
 | `scripts/*.py` | Two small helpers (fail-open hooks, marked `CLAUDE.md` blocks) |
 | `profiles/<name>/` | Saved tailoring for one product (created by `profile_save.sh`) |
@@ -268,8 +284,8 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 282 checks
-on 2026-11-01; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 287 checks
+on 2026-11-11; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
 cloud-session results are manual.
 
 - Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
@@ -311,7 +327,9 @@ cloud-session results are manual.
   approves, QAs or merges and never pushes to `main`; every agent's frontmatter has exactly its allowed keys; the
   four builders' Never and When blocked sections are identical; the owner's merge rule reads the same in the
   project-manager skill (sections 2, 6 and 11), `/gated-review` and `docs/workflow.md`; `PACK_pm` lists exactly
-  its seven items, no other pack installs a builder, and `--pack pm` installs exactly those seven.
+  its eight items, no other pack installs a builder, and `--pack pm` installs exactly those eight; `qa-engineer` is
+  read-only and `/gated-review`'s default QA agent; `/gated-review` says it is the only merge gate and
+  `/tiered-review` says it is not one.
 
 - Memory (offline): `check.py` accepts the skill's own lesson and handoff examples and changes no file; names
   each format problem (duplicate or malformed id, missing or empty field, bad status, scope or count, undated

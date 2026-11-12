@@ -17,7 +17,8 @@ Words you can add to the last line of the prompt:
 - `packs <list>`: also install optional packs, comma-separated (`roles`, `quant`, `systems`, `web3`,
   `fintech`, `security`, `mobile`, `ops`, `memory`, `pm`, or `all`); see "Packs" in the README. `memory` adds
   `/learn`, `/handoff` and `/pickup` for lessons and handoffs kept in the project repo. `pm` adds the
-  project-manager skill, four builder agents and `/gated-review`; use it with `roles` and `memory`.
+  project-manager and github-api skills, four builder agents, `qa-engineer` and `/gated-review`; use it with
+  `roles` and `memory`.
 
 Permission prompts: in a cloud session on the auto permission mode, the harness may refuse to run scripts from
 the cloned repo ("Code from External"). In two fresh sessions on 2026-10-26 the agent stopped at step 5 (the
