@@ -46,11 +46,12 @@ Another Claude session cannot answer for you: agents treat relayed messages as d
 | Trail of Bits skills (packs only) | github.com/trailofbits/skills, CC-BY-SA-4.0 | commit + listed skill folders |
 | wshobson agents (packs only) | github.com/wshobson/agents, MIT | commit + listed skill folders |
 | ECC (packs only) | github.com/affaan-m/ECC, MIT | commit + listed skill folders |
+| Cloudflare security-audit (packs only) | github.com/cloudflare/security-audit-skill, MIT | commit + listed skill folder |
 
 From Agent Skills it copies the skills, slash commands (with the `agent-skills:` prefix stripped, because they
 are installed as plain files, not as a plugin) and agents named in `sources.lock`: 15 skills, 7 commands and
 4 agents at the current pins. Each Ponytail and Agent Skills skill folder gets its upstream `LICENSE`; the Agent
-Skills one also covers its agents and commands, which are single files. The last three sources are fetched only
+Skills one also covers its agents and commands, which are single files. The last four sources are fetched only
 when a `--pack` needs them, and only the skill folders listed in `sources.lock` are copied, each with its
 upstream `LICENSE`.
 
@@ -70,7 +71,7 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 | `systems` | `rust-developer`, `cpp-developer`, `low-latency-systems` | ToB `modern-cpp`; ECC `rust-patterns`, `rust-testing`, `cpp-testing` |
 | `web3` | `blockchain-developer`, `solidity-developer`, `web3-integration`, `crypto-custody-and-keys` | ToB `entry-point-analyzer`, and from building-secure-contracts: `secure-workflow-guide`, `guidelines-advisor`, `token-integration-analyzer`, `code-maturity-assessor`, `audit-prep-assistant`; ECC `evm-token-decimals`, `defi-amm-security` |
 | `fintech` | `financial-ledger`, `kyc-aml-compliance` | |
-| `security` | | ToB `property-based-testing` |
+| `security` | | ToB `property-based-testing`; Cloudflare `security-audit` (see "Security audits") |
 | `mobile` | `react-native-expo` | ECC `react-native-patterns` |
 | `ops` | | wshobson `prometheus-configuration`, `postmortem-writing` |
 | `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup` (see "Memory and handoffs") | |
@@ -129,7 +130,34 @@ project's own copy, never in this public repo.
 Without the `pm` pack there is no merge-gate command: merge on your own word (or your project's rule), after
 whichever checks you ran.
 
-**Licences.** Trail of Bits skills are CC-BY-SA-4.0; Ponytail, Agent Skills, wshobson and ECC are MIT. Every
+**Security audits.** The `security` pack adds Cloudflare's `security-audit` skill: a defensive, source-first audit
+that maps the code, hunts with many read-only agents, has a different agent try to disprove each candidate, and
+writes validated JSON findings and reports. Which security tool to use:
+
+| Need | Use |
+|---|---|
+| Writing code securely | Agent Skills `security-and-hardening` (base) |
+| A security question, or one suspected flaw | `security-audit` in guidance mode (the default when you ask a question) |
+| The current change | Claude Code's built-in security review command, and the reviewers of `/gated-review` |
+| A whole codebase, before a release or an external audit | `security-audit` in full audit mode: ask for an audit or a pen test of the codebase |
+| Invariants of money or parsing code | Trail of Bits `property-based-testing` |
+| Smart contracts | the `web3` pack's Trail of Bits and ECC skills |
+
+- **Cost.** A full audit runs many agents: four for reconnaissance, about one per coverage unit, critics, and one
+  or two verifiers per candidate. Its own README says one run finds about half of what repeated runs find. Ask for
+  the `quick` profile or a scoped run (named paths, or the diff between two refs) for a routine check, `standard`
+  before a release, and give it a budget (a maximum number of agent runs) every time.
+- **Reports are sensitive.** Findings are vulnerabilities. The output goes outside the repository by default
+  (`~/security-audit-skill/<repo>/run-<N>`), which a cloud container loses: copy `REPORT.md`, `findings.json` and
+  `coverage-ledger.json` somewhere private, never into a public repository. Later runs use the earlier ledgers.
+- **No execution here.** It runs target code only inside a sandbox with no network, an empty environment and
+  resource limits. A cloud session is not that, so the skill stays source-only and records anything it cannot
+  settle without running code as "needs validation".
+- **Its agents.** It names a `research` agent (read-only exploration) and a `general` agent; in Claude Code those are
+  the Explore and general-purpose agents. Its validators need Node.js; they refuse every input on a system without
+  no-follow file opening (likely Windows).
+
+**Licences.** Trail of Bits skills are CC-BY-SA-4.0; Ponytail, Agent Skills, wshobson, ECC and Cloudflare are MIT. Every
 installed third-party skill folder holds its upstream `LICENSE`. A tailored override of a third-party file is a
 derivative work: it must keep the attribution and, for Trail of Bits, stay under CC-BY-SA-4.0. So
 `profile_save.sh` copies the `LICENSE` into each tailored third-party skill folder, writes
@@ -284,8 +312,8 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 287 checks
-on 2026-11-11; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 293 checks
+on 2026-11-19; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
 cloud-session results are manual.
 
 - Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
@@ -316,8 +344,8 @@ cloud-session results are manual.
   role agents limited to Read, Grep and Glob and the four builders to exactly their six tools, valid frontmatter
   and unique names; a re-run is identical; a default install has exactly the base skills from `sources.lock` and
   no pack item, and each pack installed on its own adds exactly its items to that and removes nothing; an
-  unfetchable Trail of Bits pin and a pinned skill that needs plugin-only features both stop with nothing
-  installed; the snapshot covers the packs and `profile_save.sh` finds nothing to save; a profile saved with
+  unfetchable Trail of Bits or Cloudflare pin and a pinned skill that needs plugin-only features stop with nothing
+  installed; the Cloudflare skill keeps its MIT `LICENSE` and its validators; the snapshot covers the packs and `profile_save.sh` finds nothing to save; a profile saved with
   packs records them, keeps the `LICENSE` in a tailored third-party skill, and replays them without `--pack`;
   dropping the packs on a re-run prints a warning.
 
@@ -368,9 +396,9 @@ either.
 ## Updating a pin
 
 Review the upstream diff first. Then change the SHA (and, for Ponytail, the sha256 of `SKILL.md` and of
-`LICENSE`) in `sources.lock`, run `--dry-run`, and open a pull request. For Trail of Bits, wshobson and ECC, read
-every changed file in the listed skill folders in full (they are marked "audited line by line"), check that each
-folder still lives at the same path, and update the audit date in `sources.lock`.
+`LICENSE`) in `sources.lock`, run `--dry-run`, and open a pull request. For Trail of Bits, wshobson, ECC and
+Cloudflare, read every changed file in the listed skill folders in full (they are marked "audited line by line"),
+check that each folder still lives at the same path, and update the audit date in `sources.lock`.
 
 Ponytail was reviewed against upstream `main` (`09c434ab`) on 2026-10-26. Since the pin, only commit `df9e8994`
 (2026-10-16) changes `skills/ponytail/SKILL.md`: it adds `off` to the frontmatter `argument-hint`. Ponytail's
