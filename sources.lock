@@ -61,3 +61,11 @@ WSHOBSON_SKILL_PATHS="plugins/observability-monitoring/skills/prometheus-configu
 ECC_REPO="affaan-m/ECC"
 ECC_SHA="25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b"
 ECC_SKILL_PATHS="skills/rust-patterns skills/rust-testing skills/cpp-testing skills/evm-token-decimals skills/defi-amm-security skills/react-native-patterns"
+
+# Cloudflare security-audit skill: github.com/cloudflare/security-audit-skill (MIT). Commit of 2026-09-14.
+# Audited line by line: every file in the skill folder (SKILL.md, 15 reference files, the report schema, two
+# zero-dependency Node validators and their tests) was read in full on 2026-11-19. Its validators need Node.js.
+# Nothing else from the repository is used (its README points at an npx installer; bootstrap.sh copies the folder).
+CLOUDFLARE_REPO="cloudflare/security-audit-skill"
+CLOUDFLARE_SHA="c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
+CLOUDFLARE_SKILL_PATHS="skills/security-audit"
