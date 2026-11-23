@@ -66,6 +66,7 @@ origin_of() {
       elif path_of "$TOB_SKILL_PATHS" "$n" >/dev/null; then echo "Trail of Bits ($TOB_REPO)|CC-BY-SA-4.0"
       elif path_of "$WSHOBSON_SKILL_PATHS" "$n" >/dev/null; then echo "wshobson ($WSHOBSON_REPO)|MIT"
       elif path_of "$ECC_SKILL_PATHS" "$n" >/dev/null; then echo "ECC ($ECC_REPO)|MIT"
+      elif path_of "$CLOUDFLARE_SKILL_PATHS" "$n" >/dev/null; then echo "Cloudflare ($CLOUDFLARE_REPO)|MIT"
       fi ;;
     agents/*) [ -f "$HERE/agents/$n.md" ] || echo "Agent Skills ($AGENT_SKILLS_REPO)|MIT" ;;
     commands/*) if has "$AGENT_COMMANDS" "$n"; then echo "Agent Skills ($AGENT_SKILLS_REPO)|MIT"; fi ;;
@@ -144,6 +145,7 @@ PROFILE_AGENT_SKILLS_SHA="$AGENT_SKILLS_SHA"
 PROFILE_TOB_SHA="$TOB_SHA"
 PROFILE_WSHOBSON_SHA="$WSHOBSON_SHA"
 PROFILE_ECC_SHA="$ECC_SHA"
+PROFILE_CLOUDFLARE_SHA="$CLOUDFLARE_SHA"
 PROFILE_PACKS="$PACKS_USED"
 EOF
 
