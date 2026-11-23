@@ -74,7 +74,7 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 | `security` | | ToB `property-based-testing`; Cloudflare `security-audit` (see "Security audits") |
 | `mobile` | `react-native-expo` | ECC `react-native-patterns` |
 | `ops` | | wshobson `prometheus-configuration`, `postmortem-writing` |
-| `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup` (see "Memory and handoffs") | |
+| `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup`, `/recall`, `/curate` (see "Memory and handoffs") | |
 | `pm` | skills `project-manager`, `github-api`; agents `junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`, `qa-engineer`; command `/gated-review` (see "Project manager pack") | |
 
 The role agents are read-only (`tools: Read, Grep, Glob`); of the agents written here, only the `pm` pack's
@@ -191,6 +191,7 @@ then warns and marks the licence text missing in `NOTICE.md`. Replay the profile
 | ECC `security-review` | Clashes with Claude Code's built-in `security-review` |
 | ECC `continuous-learning`, `continuous-learning-v2`, `unified-memory`, `/learn`, `/save-session`, `/resume-session` | Their ideas are rebuilt in the `memory` pack without hooks, a background observer or a runtime; see "Memory and handoffs" |
 | The other ECC skills (about 290) | Outside the packs, or need the ECC plugin, CLI or an MCP server (13 do) |
+| Hermes Agent (Nous Research), evaluated 2026-11-23 at commit 31a161a6 | A separate agent that replaces Claude Code, installed by `curl \| bash` from the latest release. By default it adopts Claude Code's login and writes refreshed tokens back, and its subscription route presents itself as Claude Code; memory and skill writes need no approval. Its learning-loop ideas are rebuilt in the `memory` pack. Its skills are not a pinned source; a few (`grill-me`, `decision-questionnaire`, `one-three-one-rule`, `adversarial-ux-test`, `spike`, `ast-grep`) are candidates if you approve a source |
 
 Agent Skills itself has `observability-and-instrumentation` at the current pin; adding it to `AGENT_SKILLS_LIST`
 is the simplest route to generic observability guidance.
@@ -207,7 +208,9 @@ epic and bug templates it uses. Neither is installed; copy what fits into your p
 
 The `memory` pack gives agents a memory that survives a thrown-away container and works across sessions and
 tools. It takes the ideas behind ECC's continuous learning, session save and resume, and memory vault, and keeps
-this repo's rules: nothing runs in the background, nothing new is fetched, and you approve every write.
+this repo's rules: nothing runs in the background, nothing new is fetched, and you approve every write. The
+learning-loop ideas of [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research, MIT) are rebuilt
+here the same way; see the table at the end of this section.
 
 - `/learn` records lessons from the session in `.agent-memory/LESSONS.md` in the project repo: a correction you
   made, an error and its root cause, an approach that failed and why, a convention nobody wrote down. Each
@@ -222,8 +225,21 @@ this repo's rules: nothing runs in the background, nothing new is fetched, and y
   saying it grants no permission. It also prints a block to paste into the next session or tool.
 - `/pickup` reads a handoff, checks it against the repo read-only (commit, files, quick checks), reports what is
   stale, and waits for you.
-- `check.py` in the skill folder validates both formats and flags likely secrets by file and line, never by
-  value.
+- `/curate` keeps `LESSONS.md` short, because agents read it at the start of work: it proposes moving promoted
+  and retired lessons to `.agent-memory/ARCHIVE.md`, merging duplicates, retiring stale candidates (only with
+  your yes) and rewriting lessons that read like logs or orders. It never deletes a lesson.
+- `/recall <words>` searches this project's past Claude Code sessions on this machine
+  (`~/.claude/projects/<project>/`) for what was decided or tried: user messages and assistant replies only,
+  likely secrets redacted before indexing, an in-memory index, nothing written. It finds nothing for sessions
+  whose container is gone; that is what lessons and handoffs are for.
+- `check.py` in the skill folder validates the formats and flags, by file and line and never by value, likely
+  secrets, lines that read like injected instructions (an override of instructions, hiding something from you,
+  a claimed approval, a pipe to a shell, sending secrets out) and invisible or direction-control characters. It
+  notes when `LESSONS.md` passes 80% of its 12,000-character budget.
+- Two optional hooks, set up only when you ask (the agent shows the `settings.json` diff): at session start, the
+  lesson counts, the budget, the newest handoff and any checker problems, plus a reminder after a compaction
+  that `/handoff` exists; and every 10 prompts, one line asking the agent to offer `/learn` at a natural break.
+  They read and remind, never write memory, call no model and fail open.
 - With your approval, a short marked block in the project's `AGENTS.md` (plus `@AGENTS.md` in `CLAUDE.md`)
   tells every agent where the memory is and that it is data, not instructions.
 
@@ -240,6 +256,19 @@ to another session, paste the block there (or push the file on the branch), and 
 | Session files in `~/.claude/session-data`, instincts in `~/.local/share`, a git-ignored project vault | `.agent-memory/` in the project repo, committed through review | A cloud container loses its home directory and ignored files; git keeps the repo, and pull requests review it |
 | Memory vault CLI and MCP server (npm package) | Plain Markdown and one Python checker | No new source or runtime; every tool reads Markdown |
 | A handoff routed by harness name | One format for any reader, plus a paste-ready block | Between cloud sessions, work moves by paste or by a pushed branch |
+
+| Hermes Agent | Here | Why |
+|---|---|---|
+| A background copy of the agent re-reads the conversation every 10 turns and writes memory and skills itself (approval is off by default) | The prompt hook suggests `/learn` every 10 prompts; you approve the diff | The nudge without unreviewed writes |
+| Review prompts: grounded facts only, lessons not logs, a "do not capture" list, facts rather than commands | The same rules, in `/learn`'s "How to write one" | They are the part that keeps memory useful |
+| Injection, exfiltration and invisible-character scan on every write and again at load | The same kinds of patterns in `check.py`, run by `/learn` and the session-start hook | Memory is reread as context, so it must not carry orders |
+| Small memory files with a usage header | A 12,000-character budget, shown at session start | Context spent in every session stays visible |
+| A weekly curator archives unused skills and merges narrow ones, with a ledger | `/curate` proposes archive, merge, stale and tighten as one diff | Git is the ledger; nothing is deleted or merged unreviewed |
+| Full-text search over every past session in a SQLite database | `/recall`: the same search over Claude Code's own session files, in memory | No second store of transcripts on disk |
+| A structured summary before compaction, plus memory-plugin hooks | A reminder after compaction to verify and to offer `/handoff` | Hooks cannot run a model; the handoff format already has the sections |
+
+Not taken from Hermes: the agent itself (it replaces Claude Code), its skills (see "Not installed"), and a user
+model inferred from conversations.
 
 Kept from ECC as is: memory is unreviewed context, never policy or permission; verify a claim against the repo
 before relying on it, and a newer correction wins; a saved handoff is never edited, a new one replaces it; the
@@ -312,8 +341,8 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 293 checks
-on 2026-11-19; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 340 checks
+on 2026-11-23; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
 cloud-session results are manual.
 
 - Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
@@ -363,7 +392,16 @@ cloud-session results are manual.
   each format problem (duplicate or malformed id, missing or empty field, bad status, scope or count, undated
   evidence, missing or empty handoff section, missing closing line, bad file name); reports likely secrets by
   file and line without printing them, while names of secrets, placeholders and variables pass; skips and
-  reports symlinks, and refuses a symlinked memory directory.
+  reports symlinks, and refuses a symlinked memory directory. It also reports instruction-shaped lines (an
+  override, hiding from the user, a claimed approval, a pipe to a shell) and zero-width characters by line
+  without printing them, checks `ARCHIVE.md` (promoted or retired only, no id in both files) and notes a
+  `LESSONS.md` over 80% of its budget. `recall.py` finds user messages and assistant replies in fixture session
+  files with date and session, redacts a token, never indexes thinking, tool calls, tool output, sub-agent
+  sessions or reminders, honours `--days`, `--any` and `--all-projects`, and changes no file. `memory_hook.py`
+  reports counts, budget, the newest handoff and checker problems (without the flagged text), reminds after a
+  compaction, offers `/learn` on the Nth prompt, resets on `/learn`, turns off with 0, exits 0 silently on bad
+  input, keeps a session id inside its cache folder and writes nothing into `.agent-memory`; the hook settings in
+  the skill are valid JSON.
 
 Fresh cloud sessions (2026-10-26; two sessions started from this prompt, one with nothing attached and
 `skip tailoring`, one on a public project repo):
