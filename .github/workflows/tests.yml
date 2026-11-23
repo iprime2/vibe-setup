@@ -21,7 +21,7 @@ jobs:
       - name: shellcheck
         run: shellcheck -S warning bootstrap.sh project-init.sh session-start.sh scripts/*.sh tests/*.sh
       - name: pyflakes
-        run: python3 -m pip install --quiet pyflakes==4.1.0 && python3 -m pyflakes scripts/*.py skills/agent-memory/check.py
+        run: python3 -m pip install --quiet pyflakes==4.1.0 && python3 -m pyflakes scripts/*.py skills/agent-memory/*.py
   tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 60

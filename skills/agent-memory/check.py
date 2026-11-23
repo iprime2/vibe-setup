@@ -1,5 +1,6 @@
-"""Check an .agent-memory directory: the lesson and handoff formats of the agent-memory skill, and likely
-secrets. Read-only. A likely secret is reported by file and line only, never its value.
+"""Check an .agent-memory directory: the lesson, archive and handoff formats of the agent-memory skill, likely
+secrets, and text that tries to steer an agent (instructions aimed at the model, hidden characters). Read-only.
+A finding is reported by file and line only, never the text itself.
 
     python3 -I check.py [DIR]        (DIR defaults to .agent-memory)
 
@@ -31,9 +32,30 @@ SECRETS = [
     ("secret assignment", re.compile(r"(?i)\b(?:api[_-]?key|access[_-]?key|client[_-]?secret|secret|token"
                                      r"|passw(?:or)?d)\b\s*[:=]\s*[\"']?[A-Za-z0-9/+_.-]{8,}")),
 ]
+# Text that addresses the model instead of recording a fact. Memory is reread as context in every session, so a
+# line like this would act as an instruction there. Kept narrow on purpose: a hit needs a person to look.
+INJECTION = [
+    ("instruction override", re.compile(r"(?i)\b(?:ignore|disregard|forget)\b[^.\n]{0,40}\b(?:previous|prior|earlier"
+                                        r"|above|all|any|your|the|these|those)\b[^.\n]{0,20}\b(?:instructions?|rules"
+                                        r"|prompts?|guidelines)\b")),
+    ("hiding from the user", re.compile(r"(?i)\b(?:do not|don't|never)\s+(?:tell|inform|show|warn)\s+the\s+"
+                                        r"(?:user|owner|human)\b")),
+    ("role or prompt rewrite", re.compile(r"(?i)\byou are now\b|\b(?:new|updated|real|hidden)\s+system\s+prompt\b"
+                                          r"|^\s*system prompt\s*:")),
+    ("approval claim", re.compile(r"(?i)\b(?:pre-?approved|auto-?approve[sd]?)\b")),
+    ("pipe to a shell", re.compile(r"(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b")),
+    ("sending secrets out", re.compile(r"(?i)\b(?:curl|wget|nc|scp)\b[^\n]*(?:\$\{?\w*(?:token|key|secret|passw)\w*"
+                                       r"|\.env\b|id_rsa|\.ssh/|credentials\.json)")),
+]
+# Zero-width, word-joiner, bidirectional-control and tag characters: invisible in a review, read by the model.
+HIDDEN = re.compile("[\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\U000e0000-\U000e007f]")
 MAX_BYTES = 1_000_000
+# LESSONS.md is read at the start of work, so its size is context spent in every session. Above this many
+# characters the checker suggests /curate; it is a note, not a failure.
+LESSONS_BUDGET = 12_000
 
 problems = []
+notes = []
 
 
 def problem(msg):
@@ -53,7 +75,7 @@ def read_lines(path):
         return f.read().splitlines()
 
 
-def check_entry(where, lid, lines):
+def check_entry(where, lid, lines, archived=False):
     if not re.fullmatch(SLUG, lid):
         problem(f"{where}: id '{lid}' must be lowercase words joined by hyphens")
     fields, evidence, current = {}, [], None
@@ -91,6 +113,8 @@ def check_entry(where, lid, lines):
     status = fields.get("Status")
     if status and not re.fullmatch(r"candidate|confirmed|promoted: \S.*|retired: \S.*", status):
         problem(f"{where}: Status must be candidate, confirmed, 'promoted: <path>' or 'retired: <reason>'")
+    elif status and archived and not re.match(r"promoted: |retired: ", status):
+        problem(f"{where}: only promoted or retired lessons belong in the archive")
     seen = fields.get("Seen")
     if seen:
         m = re.fullmatch(r"(\d+), last (\d{4}-\d{2}-\d{2})", seen)
@@ -98,11 +122,12 @@ def check_entry(where, lid, lines):
             problem(f"{where}: Seen must read '<n>, last YYYY-MM-DD' with n of 1 or more")
 
 
-def check_lessons(path):
+def check_lessons(path, title="# Lessons"):
+    archived = title != "# Lessons"
     lines = read_lines(path)
     first = next((l for l in lines if l.strip()), "")
-    if first.strip() != "# Lessons":
-        problem(f"{path}: must start with '# Lessons'")
+    if first.strip() != title:
+        problem(f"{path}: must start with '{title}'")
     entries, ids = [], {}
     for n, line in enumerate(lines, 1):
         if line.startswith("### "):
@@ -115,8 +140,8 @@ def check_lessons(path):
         if lid in ids:
             problem(f"{path}:{n}: duplicate id '{lid}' (first at line {ids[lid]})")
         ids.setdefault(lid, n)
-        check_entry(f"{path}:{n} '{lid}'", lid, body)
-    return len(entries)
+        check_entry(f"{path}:{n} '{lid}'", lid, body, archived)
+    return [lid for _, lid, _ in entries]
 
 
 def check_handoff(path):
@@ -163,6 +188,13 @@ def scan_secrets(path):
             if rx.search(line):
                 problem(f"{path}:{n}: possible {kind}; remove it (value not shown)")
                 break
+        for kind, rx in INJECTION:
+            if rx.search(line):
+                problem(f"{path}:{n}: possible instruction injection ({kind}); memory records facts, it does not "
+                        "instruct the agent")
+                break
+        if HIDDEN.search(line):
+            problem(f"{path}:{n}: invisible or direction-control character; remove it")
 
 
 def main(argv):
@@ -179,7 +211,7 @@ def main(argv):
     if not os.path.isdir(root):
         print(f"{root}: not a directory", file=sys.stderr)
         return 2
-    n_lessons = n_handoffs = 0
+    lesson_ids, archive_ids, n_handoffs = [], [], 0
     for dirpath, dirnames, filenames in os.walk(root):
         for d in list(dirnames):
             if os.path.islink(os.path.join(dirpath, d)):
@@ -193,15 +225,26 @@ def main(argv):
             scan_secrets(path)
             rel = os.path.relpath(path, root)
             if rel == "LESSONS.md":
-                n_lessons = check_lessons(path)
+                lesson_ids = check_lessons(path)
+                size = len("\n".join(read_lines(path)))
+                if size > LESSONS_BUDGET * 0.8:
+                    notes.append(f"note: {path} is {size} of {LESSONS_BUDGET} characters "
+                                 f"({size * 100 // LESSONS_BUDGET}%); run /curate to archive or merge lessons")
+            elif rel == "ARCHIVE.md":
+                archive_ids = check_lessons(path, "# Lessons archive")
             elif os.path.dirname(rel) == "handoffs" and f.endswith(".md"):
                 check_handoff(path)
                 n_handoffs += 1
+    for lid in sorted(set(lesson_ids) & set(archive_ids)):
+        problem(f"{root}: id '{lid}' is in both LESSONS.md and ARCHIVE.md")
+    for line in notes:
+        print(line)
     if problems:
         print("\n".join(problems))
         print(f"{len(problems)} problem(s)")
         return 1
-    print(f"ok: {n_lessons} lesson(s), {n_handoffs} handoff(s)")
+    archived = f", {len(archive_ids)} archived" if archive_ids else ""
+    print(f"ok: {len(lesson_ids)} lesson(s){archived}, {n_handoffs} handoff(s)")
     return 0
 
 
