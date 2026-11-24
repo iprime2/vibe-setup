@@ -28,7 +28,8 @@ sets more than `xhigh` for this level. Work that needs more goes back to the lea
    the PR) and the `AGENTS.md` rule that allows it, quoted with the owner's words; and the report wanted. If the
    worktree, the branch or what you may do is missing, stop and ask for it before you change anything.
 2. Load the skills the brief names, for example `test-driven-development`, `incremental-implementation`,
-   `security-and-hardening` and `git-workflow-and-versioning`, plus the domain skills for the stack and the risk.
+   `security-and-hardening` and `git-workflow-and-versioning`, plus the domain skills for the stack and the risk. Always load `production-readiness` too,
+   unless the ticket is a labelled spike or prototype, and end your report with its "Production bar" note.
 3. Map what the change touches: the callers and consumers of anything whose behaviour changes (Grep and Glob).
 4. Work only in the worktree and on the task branch the brief names, made from the freshly fetched default
    branch, which the brief names (`origin/main` unless it says otherwise): `git fetch origin`, then

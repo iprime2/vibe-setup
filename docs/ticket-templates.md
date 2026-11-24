@@ -14,6 +14,11 @@ What and why, in 2-3 sentences. Optional user story: As a …, I want …, so th
 - [ ] One testable statement per box.
 _Source of truth: `tasks/todo.md`, <ID>. This list mirrors it._   <- only when a task-list row exists
 
+## Non-functional requirements
+- **Targets:** availability, p95/p99 latency, throughput and data size at launch and at 10x, RPO/RTO, or
+  "exempt: spike/prototype". See the `production-readiness` skill; numbers, not adjectives.
+- **Data and security:** personal or financial data, secrets, new trust boundaries, or "none".
+
 ## Technical details
 - **Approach:** …
 - **Touches:** modules and paths
@@ -53,7 +58,8 @@ The goal and why, and its step in the spec's build order if it has one.
 - [ ] …
 
 ## Technical overview
-Modules, specs, architecture decisions and the main risks.
+Modules, specs, architecture decisions and the main risks. The targets every ticket inherits (availability,
+latency, capacity, RPO/RTO), with numbers.
 
 ## Tickets
 Its sub-issues are its tickets. Done so far: … (PR numbers)

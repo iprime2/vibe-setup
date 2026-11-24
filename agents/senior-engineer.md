@@ -40,6 +40,10 @@ test that would confirm it.
   paths; N+1 queries; unbounded growth; quadratic work on input-sized data.
 - **Test adequacy.** New behaviour has a test that fails without the change; failure paths are tested, not
   only the happy path; concurrency is tested where it changed; no assertion that cannot fail.
+- **Production bar.** Against the `production-readiness` skill, unless the change is a labelled spike or
+  prototype: remote calls without a timeout or with unbounded or unsafe retries; state kept only in process
+  memory or on local disk; unpaginated lists or unbounded queries; secrets in code or logs; no metric for a
+  stated target; no "Production bar" note in the PR body.
 
 ## Severity
 
