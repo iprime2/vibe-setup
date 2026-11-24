@@ -69,3 +69,15 @@ ECC_SKILL_PATHS="skills/rust-patterns skills/rust-testing skills/cpp-testing ski
 CLOUDFLARE_REPO="cloudflare/security-audit-skill"
 CLOUDFLARE_SHA="c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
 CLOUDFLARE_SKILL_PATHS="skills/security-audit"
+
+# Hermes Agent skills: github.com/NousResearch/hermes-agent (MIT, Copyright (c) 2025 Nous Research). Commit of
+# 2026-11-23. Only the listed skill folders and the root LICENSE are fetched (a blobless, sparse checkout: the full
+# tree is about 435 MB); the agent itself is not installed (see "Not installed" in the README). Each folder is one
+# SKILL.md with no scripts, read in full on 2026-11-24. Their bodies name Hermes tools (terminal, read_file,
+# write_file, web_search, web_extract, delegate_task); the Claude Code equivalents are Bash, Read, Write,
+# WebSearch, WebFetch and Agent. spike's attribution suggests an npx installer for the GSD system: not installed.
+# Not pinned: grill-me and decision-questionnaire (ports of MIT skills from mattpocock/skills whose copyright
+# notice the port does not carry), ast-grep (its installer downloads binaries without a checksum), codex.
+HERMES_REPO="NousResearch/hermes-agent"
+HERMES_SHA="31a161a6d2b9169dddf6633c096fe038e6925d0f"
+HERMES_SKILL_PATHS="optional-skills/communication/one-three-one-rule skills/software-development/spike optional-skills/dogfood/adversarial-ux-test"

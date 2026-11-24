@@ -11,12 +11,13 @@ packvar() { ( . "$REPO/packs.conf"; eval "printf '%s' \"\${$1}\"" ); }
 ALL_PACKS="$(packvar PACKS)"
 ALL_ITEMS=""; for p in $ALL_PACKS; do ALL_ITEMS="$ALL_ITEMS $(packvar "PACK_$p")"; done
 n_kind() { printf '%s\n' $ALL_ITEMS | grep -c "^$1:"; }
-NPSKILLS=$(( $(n_kind skill) + $(n_kind tob) + $(n_kind wsh) + $(n_kind ecc) + $(n_kind cf) ))
+NPSKILLS=$(( $(n_kind skill) + $(n_kind tob) + $(n_kind wsh) + $(n_kind ecc) + $(n_kind cf) + $(n_kind hm) ))
 NPCMDS=$(n_kind command)
 TOB1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^tob:' | cut -d: -f2)"
 WSH1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^wsh:' | cut -d: -f2)"
 ECC1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^ecc:' | cut -d: -f2)"
 CF1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^cf:' | cut -d: -f2)"
+HM1="$(printf '%s\n' $ALL_ITEMS | grep -m1 '^hm:' | cut -d: -f2)"
 item_path() { case "$2" in agent:*) echo "$1/agents/${2#*:}.md" ;; command:*) echo "$1/commands/${2#*:}.md" ;; *) echo "$1/skills/${2#*:}/SKILL.md" ;; esac; }
 show_warns() { printf '%s\n' "$OUT" | grep '^WARN' | sed 's/^/    info: /'; }
 has_word() { case " $1 " in *" $2 "*) return 0 ;; esac; return 1; }
@@ -142,6 +143,8 @@ expect_out "it plans the Trail of Bits fetch at the pin" "fetch -q --depth 1 ori
 expect_out "and the wshobson fetch at the pin" "fetch -q --depth 1 origin $(lockvar "$REPO" WSHOBSON_SHA)"
 expect_out "and the ECC fetch at the pin" "fetch -q --depth 1 origin $(lockvar "$REPO" ECC_SHA)"
 expect_out "and the Cloudflare fetch at the pin" "fetch -q --depth 1 origin $(lockvar "$REPO" CLOUDFLARE_SHA)"
+expect_out "and the Hermes fetch at the pin, contents only for the listed folders" "fetch -q --depth 1 --filter=blob:none origin $(lockvar "$REPO" HERMES_SHA)"
+expect_out "with a sparse checkout of the root LICENSE and those folders" "sparse-checkout set --no-cone /LICENSE /$(lockvar "$REPO" HERMES_SKILL_PATHS | cut -d' ' -f1)/"
 expect_out "and copies this repo's skills" "cp -R $REPO/skills/system-design"
 capture bash "$REPO/bootstrap.sh" --scope project --pack roles --dry-run
 expect_rc "project scope, one pack: exits 0" 0
@@ -164,13 +167,14 @@ n=$(count "$C/commands"); want=$((NCMDS + NPCMDS))
 if [ "$n" -eq "$want" ]; then ok "commands: $want"; else bad "commands: $n, wanted $want"; fi
 missing=""; for it in $ALL_ITEMS; do [ -f "$(item_path "$C" "$it")" ] || missing="$missing $it"; done
 if [ -z "$missing" ]; then ok "every pack item is installed"; else bad "missing:$missing"; fi
-lic=""; for it in $ALL_ITEMS; do case "$it" in tob:*|wsh:*|ecc:*|cf:*) [ -f "$C/skills/${it#*:}/LICENSE" ] || lic="$lic ${it#*:}" ;; esac; done
+lic=""; for it in $ALL_ITEMS; do case "$it" in tob:*|wsh:*|ecc:*|cf:*|hm:*) [ -f "$C/skills/${it#*:}/LICENSE" ] || lic="$lic ${it#*:}" ;; esac; done
 if [ -z "$lic" ]; then ok "every third-party skill has its upstream LICENSE"; else bad "no LICENSE in:$lic"; fi
 check "Trail of Bits copies carry CC-BY-SA-4.0" grep -q "Attribution-ShareAlike 4.0" "$C/skills/$TOB1/LICENSE"
 check "wshobson copies carry the MIT licence" grep -q "MIT License" "$C/skills/$WSH1/LICENSE"
 check "ECC copies carry the MIT licence" grep -q "MIT License" "$C/skills/$ECC1/LICENSE"
 check "Cloudflare copies carry the MIT licence" grep -q "Copyright (c) 2025-2026 Cloudflare" "$C/skills/$CF1/LICENSE"
 check "the Cloudflare skill keeps its validators" test -f "$C/skills/$CF1/validate-findings.cjs"
+check "Hermes copies carry the MIT licence" grep -q "Copyright (c) 2025 Nous Research" "$C/skills/$HM1/LICENSE"
 check "no installed skill needs CLAUDE_PLUGIN_ROOT" bash -c "! grep -rlq CLAUDE_PLUGIN_ROOT '$C/skills'"
 ro="" nro=0 wr="" nwr=0
 for it in $ALL_ITEMS; do case "$it" in agent:*)
@@ -248,6 +252,15 @@ capture env HOME="$H4" bash "$W/cf-bad/bootstrap.sh" --pack security
 expect_rc "exits 1" 1
 expect_out "prints STOP with the reason" "STOP: could not fetch cloudflare/security-audit-skill"
 check "nothing was installed in that HOME" test ! -e "$H4/.claude"
+
+echo "== a Hermes pin that cannot be fetched stops with nothing installed"
+copy_repo "$W/hm-bad"
+sed -i.bak 's/^HERMES_SHA=.*/HERMES_SHA="0123456789abcdef0123456789abcdef01234567"/' "$W/hm-bad/sources.lock"
+H5="$W/home-hm"; mkdir -p "$H5" "$W/c-hm"; cd "$W/c-hm" || exit 2
+capture env HOME="$H5" bash "$W/hm-bad/bootstrap.sh" --pack product
+expect_rc "exits 1" 1
+expect_out "prints STOP with the reason" "STOP: could not fetch NousResearch/hermes-agent"
+check "nothing was installed in that HOME" test ! -e "$H5/.claude"
 
 echo "== a pinned skill that needs plugin-only features is refused"
 copy_repo "$W/tob-plugin"
