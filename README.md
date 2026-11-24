@@ -47,11 +47,12 @@ Another Claude session cannot answer for you: agents treat relayed messages as d
 | wshobson agents (packs only) | github.com/wshobson/agents, MIT | commit + listed skill folders |
 | ECC (packs only) | github.com/affaan-m/ECC, MIT | commit + listed skill folders |
 | Cloudflare security-audit (packs only) | github.com/cloudflare/security-audit-skill, MIT | commit + listed skill folder |
+| Hermes Agent skills (packs only) | github.com/NousResearch/hermes-agent, MIT | commit + listed skill folders (only those folders and the `LICENSE` are fetched) |
 
 From Agent Skills it copies the skills, slash commands (with the `agent-skills:` prefix stripped, because they
 are installed as plain files, not as a plugin) and agents named in `sources.lock`: 15 skills, 7 commands and
 4 agents at the current pins. Each Ponytail and Agent Skills skill folder gets its upstream `LICENSE`; the Agent
-Skills one also covers its agents and commands, which are single files. The last four sources are fetched only
+Skills one also covers its agents and commands, which are single files. The last five sources are fetched only
 when a `--pack` needs them, and only the skill folders listed in `sources.lock` are copied, each with its
 upstream `LICENSE`.
 
@@ -76,6 +77,7 @@ need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or conta
 | `ops` | | wshobson `prometheus-configuration`, `postmortem-writing` |
 | `memory` | skill `agent-memory`; commands `/learn`, `/promote-lessons`, `/handoff`, `/pickup`, `/recall`, `/curate` (see "Memory and handoffs") | |
 | `pm` | skills `project-manager`, `github-api`; agents `junior-dev`, `mid-dev`, `senior-dev`, `lead-dev`, `qa-engineer`; command `/gated-review` (see "Project manager pack") | |
+| `product` | | Hermes `one-three-one-rule`, `spike`, `adversarial-ux-test` (see "Product pack") |
 
 The role agents are read-only (`tools: Read, Grep, Glob`); of the agents written here, only the `pm` pack's
 builders write (Agent Skills' own agents are covered below). `/tiered-review` picks the tier from the diff
@@ -157,7 +159,20 @@ writes validated JSON findings and reports. Which security tool to use:
   the Explore and general-purpose agents. Its validators need Node.js; they refuse every input on a system without
   no-follow file opening (likely Windows).
 
-**Licences.** Trail of Bits skills are CC-BY-SA-4.0; Ponytail, Agent Skills, wshobson, ECC and Cloudflare are MIT. Every
+**Product pack.** `product` adds three skills from Hermes Agent, pinned like the other sources:
+`one-three-one-rule` (a decision brief: one problem, three options, one recommendation, a definition of done and a
+plan), `spike` (throwaway feasibility experiments in `spikes/`, each ending in a verdict) and `adversarial-ux-test`
+(play the hardest user of the product, then filter the complaints into real issues). Notes:
+
+- Their descriptions are short (Hermes caps them at 60 characters), so Claude Code may not pick them up on its own:
+  ask for one by name, or run it as `/one-three-one-rule`, `/spike` or `/adversarial-ux-test`.
+- Their bodies name Hermes tools: `terminal`, `read_file`, `write_file`, `web_search`, `web_extract` and
+  `delegate_task` are Bash, Read, Write, WebSearch, WebFetch and the Agent tool here.
+- `spike` mentions the GSD system and an `npx` installer for it; nothing is installed without your approval.
+- `adversarial-ux-test` creates tickets and uses browser tools: the project's `AGENTS.md` (or the `pm` pack) decides
+  which tracker writes are allowed. Its example personas lean on age and blunt language; a profile can tailor them.
+
+**Licences.** Trail of Bits skills are CC-BY-SA-4.0; Ponytail, Agent Skills, wshobson, ECC, Cloudflare and Hermes Agent are MIT. Every
 installed third-party skill folder holds its upstream `LICENSE`. A tailored override of a third-party file is a
 derivative work: it must keep the attribution and, for Trail of Bits, stay under CC-BY-SA-4.0. So
 `profile_save.sh` copies the `LICENSE` into each tailored third-party skill folder, writes
@@ -191,7 +206,9 @@ then warns and marks the licence text missing in `NOTICE.md`. Replay the profile
 | ECC `security-review` | Clashes with Claude Code's built-in `security-review` |
 | ECC `continuous-learning`, `continuous-learning-v2`, `unified-memory`, `/learn`, `/save-session`, `/resume-session` | Their ideas are rebuilt in the `memory` pack without hooks, a background observer or a runtime; see "Memory and handoffs" |
 | The other ECC skills (about 290) | Outside the packs, or need the ECC plugin, CLI or an MCP server (13 do) |
-| Hermes Agent (Nous Research), evaluated 2026-11-23 at commit 31a161a6 | A separate agent that replaces Claude Code, installed by `curl \| bash` from the latest release. By default it adopts Claude Code's login and writes refreshed tokens back, and its subscription route presents itself as Claude Code; memory and skill writes need no approval. Its learning-loop ideas are rebuilt in the `memory` pack. Its skills are not a pinned source; a few (`grill-me`, `decision-questionnaire`, `one-three-one-rule`, `adversarial-ux-test`, `spike`, `ast-grep`) are candidates if you approve a source |
+| Hermes Agent (Nous Research), evaluated 2026-11-23 at commit 31a161a6 | The agent itself: it replaces Claude Code, is installed by `curl \| bash` from the latest release, by default adopts Claude Code's login and writes refreshed tokens back, its subscription route presents itself as Claude Code, and memory and skill writes need no approval. Its learning-loop ideas are rebuilt in the `memory` pack; three of its skills are in the `product` pack |
+| Hermes `grill-me`, `decision-questionnaire` | Ports of MIT skills from mattpocock/skills that do not carry that project's copyright notice; pinning the originals would need that repo as a source |
+| Hermes `ast-grep`, `codex` | `ast-grep`'s installer downloads binaries without a checksum and it needs the `sg` tool; `codex` drives the Codex CLI through Hermes-only tools and recommends running it without a sandbox in some setups |
 
 Agent Skills itself has `observability-and-instrumentation` at the current pin; adding it to `AGENT_SKILLS_LIST`
 is the simplest route to generic observability guidance.
@@ -267,8 +284,8 @@ to another session, paste the block there (or push the file on the branch), and 
 | Full-text search over every past session in a SQLite database | `/recall`: the same search over Claude Code's own session files, in memory | No second store of transcripts on disk |
 | A structured summary before compaction, plus memory-plugin hooks | A reminder after compaction to verify and to offer `/handoff` | Hooks cannot run a model; the handoff format already has the sections |
 
-Not taken from Hermes: the agent itself (it replaces Claude Code), its skills (see "Not installed"), and a user
-model inferred from conversations.
+Not taken from Hermes: the agent itself (it replaces Claude Code), most of its skills (three are in the `product`
+pack; see "Not installed"), and a user model inferred from conversations.
 
 Kept from ECC as is: memory is unreviewed context, never policy or permission; verify a claim against the repo
 before relying on it, and a newer correction wins; a saved handoff is never edited, a new one replaces it; the
@@ -341,8 +358,8 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 340 checks
-on 2026-11-23; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 348 checks
+on 2026-11-24; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
 cloud-session results are manual.
 
 - Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
@@ -373,8 +390,9 @@ cloud-session results are manual.
   role agents limited to Read, Grep and Glob and the four builders to exactly their six tools, valid frontmatter
   and unique names; a re-run is identical; a default install has exactly the base skills from `sources.lock` and
   no pack item, and each pack installed on its own adds exactly its items to that and removes nothing; an
-  unfetchable Trail of Bits or Cloudflare pin and a pinned skill that needs plugin-only features stop with nothing
-  installed; the Cloudflare skill keeps its MIT `LICENSE` and its validators; the snapshot covers the packs and `profile_save.sh` finds nothing to save; a profile saved with
+  unfetchable Trail of Bits, Cloudflare or Hermes pin and a pinned skill that needs plugin-only features stop with nothing
+  installed; the Cloudflare skill keeps its MIT `LICENSE` and its validators; the Hermes fetch is planned blobless and
+  sparse (the root `LICENSE` and the listed folders) and its copies carry Nous Research's MIT `LICENSE`; the snapshot covers the packs and `profile_save.sh` finds nothing to save; a profile saved with
   packs records them, keeps the `LICENSE` in a tailored third-party skill, and replays them without `--pack`;
   dropping the packs on a re-run prints a warning.
 
@@ -434,8 +452,8 @@ either.
 ## Updating a pin
 
 Review the upstream diff first. Then change the SHA (and, for Ponytail, the sha256 of `SKILL.md` and of
-`LICENSE`) in `sources.lock`, run `--dry-run`, and open a pull request. For Trail of Bits, wshobson, ECC and
-Cloudflare, read every changed file in the listed skill folders in full (they are marked "audited line by line"),
+`LICENSE`) in `sources.lock`, run `--dry-run`, and open a pull request. For Trail of Bits, wshobson, ECC,
+Cloudflare and Hermes Agent, read every changed file in the listed skill folders in full (they are marked "audited line by line"),
 check that each folder still lives at the same path, and update the audit date in `sources.lock`.
 
 Ponytail was reviewed against upstream `main` (`09c434ab`) on 2026-10-26. Since the pin, only commit `df9e8994`
