@@ -10,10 +10,11 @@ verify before relying on one, and the user's instructions always win.
 - Why: a clone or a lookup goes stale within minutes; both times the work had already been merged
 - Scope: generic
 - Status: confirmed
-- Seen: 2, last 2026-10-27
+- Seen: 3, last 2026-11-23
 - Evidence:
   - 2026-10-26: another session reported the pack work missing; `git ls-remote` showed it merged in PR #8 (main 747acc5)
   - 2026-10-27: I reported PR #11 as still open from a pull request list fetched earlier; it had been merged at 09:25 UTC, a minute before
+  - 2026-11-23: a merge-conflict notice for PR #25 arrived after the fix was pushed; a fresh read showed it mergeable at e41f2bb
 
 ### rerunning-bootstrap-replaces-tailoring
 - When: bootstrap.sh is about to run again in a project whose `.claude/` may already hold tailoring
@@ -38,14 +39,16 @@ verify before relying on one, and the user's instructions always win.
 
 ### update-the-readme-check-count
 - When: tests are added or removed
-- Do: after the full run, set the count in the README "Tested" section (`bash tests/run.sh`, N checks) to the real total, and say if a check was only rerun on its own
+- Do: after the full run, set the count and date in the README "Tested" section (`bash tests/run.sh`, N checks) to the real total, and say if a check was only rerun on its own. When two open pull requests both change it, the second one to merge conflicts on that line: merge main into it, run the full suite again and set the combined total
 - Why: the README states the count as a fact; it is not computed
 - Scope: project
-- Status: candidate
-- Seen: 2, last 2026-10-26
+- Status: confirmed
+- Seen: 4, last 2026-11-24
 - Evidence:
   - 2026-10-26: 147 to 166 checks (commit 32802cd, PR #9)
   - 2026-10-26: 166 to 210 checks (commit 044317c, PR #10)
+  - 2026-11-23: PR #26 and PR #25 both set the count; after #26 merged, #25 conflicted and the combined run gave 340 (commit e41f2bb)
+  - 2026-11-24: 348, 354 and 358 checks in PRs #28, #29 and #30
 
 ### green-means-the-local-suite-here
 - When: asked to merge a pull request in this repo "once it is green"
@@ -68,3 +71,34 @@ verify before relying on one, and the user's instructions always win.
 - Seen: 1, last 2026-10-26
 - Evidence:
   - 2026-10-26: `tests/test_memory.sh` builds its fake token, key and password at run time (PR #10)
+
+### check-the-licence-chain-of-a-ported-skill
+- When: a skill about to be pinned says it is ported or adapted from another project
+- Do: check that the folder or repository carries that project's copyright notice; if it does not, pin the original from its own repository (a new source, so ask first) instead of the port
+- Why: an MIT or similar licence requires its notice in every copy, and a port without it passes the gap on to every install
+- Scope: generic
+- Status: candidate
+- Seen: 1, last 2026-11-24
+- Evidence:
+  - 2026-11-24: Hermes' grill-me and decision-questionnaire are ports of mattpocock/skills without its notice; the originals were pinned instead (PR #29)
+
+### fetch-large-source-repos-sparsely
+- When: a new pinned source is a large repository and only a few skill folders are wanted
+- Do: fetch it with `fetch_sparse` in bootstrap.sh (blobless, with a sparse checkout of the root LICENSE and the listed folders) rather than `fetch_commit`
+- Why: `fetch_commit` checks out the whole tree on every install
+- Scope: project
+- Status: candidate
+- Seen: 1, last 2026-11-24
+- Evidence:
+  - 2026-11-24: Hermes Agent is about 435 MB checked out; the sparse fetch of three folders took about 1.5 s and 4 MB (PR #28)
+
+### reuse-the-throwaway-home-for-manual-installs-as-root
+- When: running bootstrap.sh by hand as root with a new throwaway HOME, after an earlier install on the same machine
+- Do: reuse the earlier throwaway HOME (or give `UV_TOOL_BIN_DIR` a fresh folder) for the manual run
+- Not: reading the "Executables already exist: graphify" stop as a bug in the change under test
+- Why: as root, bootstrap.sh installs graphify into /usr/local/bin while uv keeps its tool list under HOME, so a new HOME does not know the executables are uv's
+- Scope: project
+- Status: candidate
+- Seen: 1, last 2026-11-24
+- Evidence:
+  - 2026-11-24: a manual `--pack product` run with a new HOME stopped at `uv tool install`; the same run in the earlier HOME passed
