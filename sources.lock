@@ -77,7 +77,17 @@ CLOUDFLARE_SKILL_PATHS="skills/security-audit"
 # write_file, web_search, web_extract, delegate_task); the Claude Code equivalents are Bash, Read, Write,
 # WebSearch, WebFetch and Agent. spike's attribution suggests an npx installer for the GSD system: not installed.
 # Not pinned: grill-me and decision-questionnaire (ports of MIT skills from mattpocock/skills whose copyright
-# notice the port does not carry), ast-grep (its installer downloads binaries without a checksum), codex.
+# notice the port does not carry; the originals are pinned below), ast-grep (its installer downloads binaries
+# without a checksum), codex.
 HERMES_REPO="NousResearch/hermes-agent"
 HERMES_SHA="31a161a6d2b9169dddf6633c096fe038e6925d0f"
 HERMES_SKILL_PATHS="optional-skills/communication/one-three-one-rule skills/software-development/spike optional-skills/dogfood/adversarial-ux-test"
+
+# Matt Pocock's skills: github.com/mattpocock/skills (MIT, Copyright (c) 2026 Matt Pocock). Commit of 2026-11-19.
+# Audited line by line on 2026-11-24: every file in the three folders (a SKILL.md and an agents/openai.yaml of
+# display names for Codex, each). grill-me is user-invoked only and hands off to grilling; to-questionnaire is
+# user-invoked only and writes one Markdown file in the current directory. No scripts. Nothing else from the
+# repository is used (its README points at plugin and skills.sh installers; bootstrap.sh copies the folders).
+MATTPOCOCK_REPO="mattpocock/skills"
+MATTPOCOCK_SHA="abeeaf95660ba9e8b7c753eb38f441ca707a8823"
+MATTPOCOCK_SKILL_PATHS="skills/productivity/grill-me skills/productivity/grilling skills/productivity/to-questionnaire"
