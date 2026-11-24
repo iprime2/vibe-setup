@@ -313,6 +313,7 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 | `tests/` | Regression tests: `bash tests/run.sh` (needs network; uses a throwaway HOME) |
 | `.agent-memory/LESSONS.md` | Lessons learned while building this repo (memory pack format); not installed |
 | `AGENTS.md`, `CLAUDE.md` | Point agents working on this repo to `.agent-memory/`; not installed |
+| `.claude/settings.json` | This repo's own memory hooks (`skills/agent-memory/memory_hook.py`: status at session start, a `/learn` reminder every 10 prompts); not installed |
 
 ## Scopes
 

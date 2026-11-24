@@ -1,0 +1,6 @@
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "f=\"$CLAUDE_PROJECT_DIR/skills/agent-memory/memory_hook.py\"; [ -f \"$f\" ] && python3 -I \"$f\" session-start; exit 0"}]}],
+    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "f=\"$CLAUDE_PROJECT_DIR/skills/agent-memory/memory_hook.py\"; [ -f \"$f\" ] && python3 -I \"$f\" prompt; exit 0"}]}]
+  }
+}
