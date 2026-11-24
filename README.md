@@ -122,10 +122,11 @@ bootstrap prints informational `WARN` lines for the items it names from them.
 - `project-manager` makes the session that talks with you the project manager. It writes and readies tickets,
   briefs the builder the lead names at the tier and effort the lead sets, drives each PR through review and QA,
   keeps the board, and brings you every decision that is yours. It never builds or reviews.
-- `github-api` holds its recipes: the GitHub MCP server's tools first (the way a cloud session reaches GitHub),
-  with `gh api repos/{owner}/{repo}/...` as the fallback on your own machine and in CI; reviews pinned to the head,
-  review threads, sub-issues, job logs and board fields through a Projects connector. Each MCP tool is marked
-  "used" if it was called that way in a cloud session, and **verify** otherwise.
+- `github-api` holds its recipes for the route the session's instructions name: the GitHub MCP server's tools, or
+  `gh api repos/{owner}/{repo}/...` REST (the only route in cloud sessions whose built-in GitHub MCP server is
+  retired, and the usual one on your own machine and in CI); reviews pinned to the head, review threads,
+  sub-issues, job logs and board fields through a Projects connector. Each tool or call is marked "used" if it was
+  run that way in a cloud session, and **verify** otherwise.
 - `junior-dev`, `mid-dev`, `senior-dev` and `lead-dev` are builders, and the only agents here with write tools
   (`Read, Edit, Write, Bash, Grep, Glob`). Each has a default `effort` in its frontmatter (medium, high, xhigh,
   max) and states it in its body; whether a harness reads `effort` from agent frontmatter is not tested here.
