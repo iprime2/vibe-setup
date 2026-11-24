@@ -4,7 +4,7 @@
 set -u
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-NSKILLS=$(( $(lockvar "$REPO" AGENT_SKILLS_LIST | wc -w) + 1 ))   # the lock's skills plus ponytail
+NSKILLS=$(( $(lockvar "$REPO" AGENT_SKILLS_LIST | wc -w) + 2 ))   # the lock's skills, ponytail and production-readiness
 NCMDS=$(lockvar "$REPO" AGENT_COMMANDS | wc -w | tr -d ' ')
 PIN_PT=$(lockvar "$REPO" PONYTAIL_SKILL_SHA256)
 PIN_PTL=$(lockvar "$REPO" PONYTAIL_LICENSE_SHA256)
@@ -27,6 +27,7 @@ echo "== dry run changes nothing"
 capture bash "$REPO/bootstrap.sh" --dry-run
 expect_rc "dry run exits 0" 0
 expect_out "graphify's dependencies are date-pinned" "uv tool install graphifyy==[0-9.]* --exclude-newer 20"
+expect_out "the production bar is planned by default" "append_block.py $HOME/.claude/CLAUDE.md $REPO/rules/production.md production"
 check "dry run created no ~/.claude" test ! -e "$HOME/.claude"
 
 echo "== user-scope install"
@@ -44,6 +45,8 @@ if [ "$(sha256_of "$C/skills/ponytail/LICENSE" 2>/dev/null)" = "$PIN_PTL" ]; the
 lic=""; for s in ponytail $(lockvar "$REPO" AGENT_SKILLS_LIST); do grep -q "MIT License" "$C/skills/$s/LICENSE" 2>/dev/null || lic="$lic $s"; done
 if [ -z "$lic" ]; then ok "every Ponytail and Agent Skills skill folder has its upstream MIT LICENSE"; else bad "no LICENSE in:$lic"; fi
 check "no 'agent-skills:' prefix is left in the commands" bash -c "! grep -rq 'agent-skills:' '$C/commands'"
+check "the production-readiness skill is installed by default" test -f "$C/skills/production-readiness/SKILL.md"
+check "and the production bar rule is in CLAUDE.md" grep -q "Everything built here is meant to reach production" "$C/CLAUDE.md"
 if printf '%s\n' "$OUT" | grep -q '^WARN'; then
   bad "dangling-reference warnings were printed"; printf '%s\n' "$OUT" | grep '^WARN' | sed 's/^/    /'
 else ok "no dangling-reference warnings"; fi
@@ -51,11 +54,13 @@ else ok "no dangling-reference warnings"; fi
 echo "== re-running is idempotent"
 capture bash "$REPO/bootstrap.sh" --with-rules
 expect_rc "second run exits 0" 0
-if [ "$(grep -c 'vibe-setup:begin' "$C/CLAUDE.md")" -eq 1 ]; then ok "rules block appears once"; else bad "rules block count"; fi
+if [ "$(grep -c 'vibe-setup:begin -->' "$C/CLAUDE.md")" -eq 1 ]; then ok "rules block appears once"; else bad "rules block count"; fi
+if [ "$(grep -c 'vibe-setup:begin:production -->' "$C/CLAUDE.md")" -eq 1 ]; then ok "production bar block appears once"; else bad "production bar block count"; fi
 e="$(grep -n 'vibe-setup:end' "$C/CLAUDE.md" | cut -d: -f1)"; g="$(grep -n '^# graphify$' "$C/CLAUDE.md" | cut -d: -f1)"
-if [ "$(printf '%s\n' "$e" | grep -c .)" -eq 1 ] && [ -n "$g" ] && [ "$e" -lt "$g" ]; then
-  ok "the rules block has one end marker and sits above graphify's section"
-else bad "rules block end marker or position"; fi
+last="$(printf '%s\n' "$e" | tail -1)"
+if [ "$(printf '%s\n' "$e" | grep -c .)" -eq 2 ] && [ -n "$g" ] && [ "$last" -lt "$g" ]; then
+  ok "the rules and production blocks have one end marker each and sit above graphify's section"
+else bad "block end markers or position"; fi
 if [ "$(grep -cE '^#{1,2} graphify' "$C/CLAUDE.md")" -eq 1 ]; then ok "graphify section appears once"; else bad "graphify section count"; fi
 
 echo "== a changed Ponytail file is refused"

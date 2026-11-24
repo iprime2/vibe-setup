@@ -4,7 +4,7 @@
 set -u
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-NSKILLS=$(( $(lockvar "$REPO" AGENT_SKILLS_LIST | wc -w) + 1 ))   # the lock's skills plus ponytail
+NSKILLS=$(( $(lockvar "$REPO" AGENT_SKILLS_LIST | wc -w) + 2 ))   # the lock's skills, ponytail and production-readiness
 NCMDS=$(lockvar "$REPO" AGENT_COMMANDS | wc -w | tr -d ' ')
 count() { ls "$1" 2>/dev/null | wc -l | tr -d ' '; }
 packvar() { ( . "$REPO/packs.conf"; eval "printf '%s' \"\${$1}\"" ); }
@@ -217,8 +217,8 @@ HB="$W/home-base"; mkdir -p "$HB" "$W/c-base"; cd "$W/c-base" || exit 2
 capture env HOME="$HB" bash "$REPO/bootstrap.sh"
 expect_rc "default install (no --pack) exits 0" 0
 names "$HB/.claude" > "$W/base.names"
-want="$(for s in ponytail graphify $(lockvar "$REPO" AGENT_SKILLS_LIST); do echo "skills/$s"; done | LC_ALL=C sort)"
-if [ "$(grep '^skills/' "$W/base.names")" = "$want" ]; then ok "default install: exactly the base skills from sources.lock"
+want="$(for s in ponytail graphify production-readiness $(lockvar "$REPO" AGENT_SKILLS_LIST); do echo "skills/$s"; done | LC_ALL=C sort)"
+if [ "$(grep '^skills/' "$W/base.names")" = "$want" ]; then ok "default install: exactly the base skills from sources.lock, plus production-readiness"
 else bad "default install skills differ from sources.lock"; fi
 leak=""; for p in $ALL_PACKS; do for f in $(expected_items "$p"); do grep -qxF "$f" "$W/base.names" && leak="$leak $f"; done; done
 if [ -z "$leak" ]; then ok "default install: no pack item"; else bad "default install contains pack items:$leak"; fi

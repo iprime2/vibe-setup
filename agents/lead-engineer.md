@@ -39,6 +39,9 @@ rewrite code. You are read-only: Read, Grep and Glob are your only tools.
   integrations, audit-trail obligations.
 - **Operability.** Metrics and alerts that would show this change failing, a runbook entry for each new
   failure mode, correlation ids in logs, and a feature flag or kill switch when the blast radius is large.
+- **Targets and scale.** The availability, latency, capacity and recovery targets are written down with
+  numbers (the `production-readiness` skill); the design meets them without over-building; single points of
+  failure are named; the path to 10x is written down and needs no rewrite.
 
 ## Output
 

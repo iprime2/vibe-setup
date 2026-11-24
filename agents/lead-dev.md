@@ -32,7 +32,8 @@ lower level.
    worktree, the branch or what you may do is missing, stop and ask for it before you change anything.
 2. Load the skills the brief names, for example `system-design`, `test-driven-development`,
    `incremental-implementation`, `security-and-hardening` and `git-workflow-and-versioning`, plus the domain
-   skills for the stack and the risk.
+   skills for the stack and the risk. Always load `production-readiness` too,
+   unless the ticket is a labelled spike or prototype, and end your report with its "Production bar" note.
 3. Map what the change touches: data ownership, the callers and consumers of every contract that changes, and the
    failure modes of every new remote call, queue or store.
 4. Work only in the worktree and on the task branch the brief names, made from the freshly fetched default

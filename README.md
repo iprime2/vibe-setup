@@ -57,6 +57,25 @@ Skills one also covers its agents and commands, which are single files. The last
 when a `--pack` needs them, and only the skill folders listed in `sources.lock` are copied, each with its
 upstream `LICENSE`.
 
+**Production bar (installed by default).** Everything agents build with this toolkit is meant to reach
+production, so every install, user or project scope, gets two pieces written here:
+
+- the `production-readiness` skill: targets with numbers (availability, latency, capacity, RPO/RTO) sized to the
+  real need; stateless services that scale out; timeouts, bounded retries and idempotency on remote calls;
+  graceful degradation and health checks; config from the environment and secrets out of code; logs, metrics,
+  traces and an alert per target; reversible migrations and tested backups; tests of failure paths and a load
+  test at the stated capacity; a proportion table by stage; and a "Production bar" note at the end of each build
+  or review;
+- a short standing rule in `CLAUDE.md` (`rules/production.md`, between `<!-- vibe-setup:begin:production -->`
+  and its end marker), because agents read `CLAUDE.md` every session while a skill loads only when it matches the
+  task.
+
+Production-ready is not over-built: a mechanism needs the target or metric that calls for it, which keeps it in
+line with Ponytail's smallest complete change. Work you label throwaway (a spike, prototype or demo) is exempt,
+and the agent says what it lacks before it moves toward production. In the workflow, the ticket template has a
+"Non-functional requirements" section, the `pm` pack's builders load the skill and end with the note, and
+`senior-engineer` and `lead-engineer` review against it. The setup interview asks for your production targets.
+
 `bootstrap.sh` fetches and checks every source it needs before it installs anything, and stops with nothing
 installed if a Ponytail hash or any commit is not the pinned one, or if a pinned third-party skill turns out to
 need plugin-only features (`${CLAUDE_PLUGIN_ROOT}`, MCP servers, hooks) or contains symlinks.
@@ -315,6 +334,7 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 | `scripts/*.py` | Two small helpers (fail-open hooks, marked `CLAUDE.md` blocks) |
 | `profiles/<name>/` | Saved tailoring for one product (created by `profile_save.sh`) |
 | `rules/CLAUDE.md` | My standing rules for agents; installed only with `--with-rules` |
+| `rules/production.md`, `skills/production-readiness/` | The production bar: a standing rule for `CLAUDE.md` and its checklist skill; installed by default |
 | `docs/context-mode.md` | Evaluation notes on `context-mode`; not installed |
 | `docs/workflow.md`, `docs/ticket-templates.md` | The working flow for a vibe-coded project, with diagrams, and its ticket, epic and bug templates; not installed |
 | `tests/` | Regression tests: `bash tests/run.sh` (needs network; uses a throwaway HOME) |
@@ -366,12 +386,14 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 354 checks
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 358 checks
 on 2026-11-24; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
 cloud-session results are manual.
 
 - Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
   stop on a tampered Ponytail hash (exit 1, nothing installed).
+- The production bar: the dry run plans it by default; the install has the `production-readiness` skill and its
+  `CLAUDE.md` block, which a re-run keeps to one copy above graphify's section, next to the `--with-rules` block.
 - Ponytail's `LICENSE` matches its pin and every Ponytail and Agent Skills skill folder has its MIT `LICENSE`; a
   changed Ponytail `LICENSE` stops the install with nothing installed.
 - `--with-rules` writes its block above graphify's `CLAUDE.md` section and replaces it in place on re-run.
@@ -475,7 +497,8 @@ from the pinned commit; that diff has not been reviewed.
 `graphify uninstall`, `uv tool uninstall graphifyy`, then delete the skill, command and agent files listed
 by `bootstrap.sh` from `~/.claude` (or `./.claude`, including `./.claude/.vibe-setup/`); pack items are listed in
 `packs.conf`. The rules block sits
-between `<!-- vibe-setup:begin -->` and `<!-- vibe-setup:end -->` in `CLAUDE.md`; a profile's block uses
-`<!-- vibe-setup:begin:profile:NAME -->` and the matching end marker. Both sit above graphify's section:
+between `<!-- vibe-setup:begin -->` and `<!-- vibe-setup:end -->` in `CLAUDE.md`; the production bar uses
+`<!-- vibe-setup:begin:production -->` and a profile's block `<!-- vibe-setup:begin:profile:NAME -->`, each with
+the matching end marker. All sit above graphify's section:
 `graphify install` rewrites that section down to the next `# ` heading, which cut off a begin marker placed
 below it and left a second copy of the block on the next run.

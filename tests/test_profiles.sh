@@ -4,7 +4,7 @@ set -u
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 R="$W/repo"; copy_repo "$R"     # a throwaway copy: profile_save.sh writes into its own profiles/
-NSKILLS=$(( $(lockvar "$R" AGENT_SKILLS_LIST | wc -w) + 1 ))
+NSKILLS=$(( $(lockvar "$R" AGENT_SKILLS_LIST | wc -w) + 2 ))   # plus ponytail and production-readiness
 NCMDS=$(lockvar "$R" AGENT_COMMANDS | wc -w | tr -d ' ')
 count() { ls "$1" 2>/dev/null | wc -l | tr -d ' '; }
 

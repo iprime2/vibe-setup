@@ -316,6 +316,13 @@ for c in $AGENT_COMMANDS; do
 done
 run cp "$src"/agents/*.md "$CLAUDE_DIR/agents/"
 
+# The production bar is installed by default: a skill with the checklist, and a short standing rule in CLAUDE.md
+# (agents read CLAUDE.md every session; a skill loads only when its description matches the task).
+echo "== production bar"
+run rm -rf "${CLAUDE_DIR:?}/skills/production-readiness"
+run cp -R "$HERE/skills/production-readiness" "$CLAUDE_DIR/skills/production-readiness"
+run python3 -I "$HERE/scripts/append_block.py" "$CLAUDE_DIR/CLAUDE.md" "$HERE/rules/production.md" production
+
 if [ -n "$SEL_PACKS" ]; then
   echo "== packs: $SEL_PACKS"
   for s in $FP_SKILLS; do
@@ -346,7 +353,7 @@ if [ "$SCOPE" = project ]; then
   done
   run rm -rf "${snap:?}"
   run mkdir -p "$snap/skills" "$snap/commands" "$snap/agents"
-  for s in ponytail $AGENT_SKILLS_LIST $FP_SKILLS $TOB_SEL $WSH_SEL $ECC_SEL $CF_SEL $HM_SEL $MP_SEL; do run cp -R "$CLAUDE_DIR/skills/$s" "$snap/skills/$s"; done
+  for s in ponytail production-readiness $AGENT_SKILLS_LIST $FP_SKILLS $TOB_SEL $WSH_SEL $ECC_SEL $CF_SEL $HM_SEL $MP_SEL; do run cp -R "$CLAUDE_DIR/skills/$s" "$snap/skills/$s"; done
   for c in $AGENT_COMMANDS $FP_COMMANDS; do run cp "$CLAUDE_DIR/commands/$c.md" "$snap/commands/$c.md"; done
   for a in "$src"/agents/*.md; do run cp "$CLAUDE_DIR/agents/$(basename "$a")" "$snap/agents/"; done
   for a in $FP_AGENTS; do run cp "$CLAUDE_DIR/agents/$a.md" "$snap/agents/"; done

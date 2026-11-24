@@ -26,7 +26,8 @@ for this level. Work that needs more goes back to the lead for a higher-level bu
    ruled out; the skills to load; what you may do (commit, push the task branch, open the PR) and the
    `AGENTS.md` rule that allows it, quoted with the owner's words; and the report wanted. If the worktree, the
    branch or what you may do is missing, stop and ask for it before you change anything.
-2. Load the skills the brief names, for example `test-driven-development` and `git-workflow-and-versioning`.
+2. Load the skills the brief names, for example `test-driven-development` and `git-workflow-and-versioning`. Always load `production-readiness` too,
+   unless the ticket is a labelled spike or prototype, and end your report with its "Production bar" note.
 3. Work only in the worktree and on the task branch the brief names, made from the freshly fetched default
    branch, which the brief names (`origin/main` unless it says otherwise): `git fetch origin`, then
    `feat/<ticket>-<name>` from it. One ticket per branch. Never switch the branch of a checkout the brief did

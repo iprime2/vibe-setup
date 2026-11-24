@@ -128,7 +128,8 @@ from:
   is gone, and then it gets a handoff note with the findings and the branch head.
 - **The brief.** Brief every agent like a peer that knows nothing: the goal and the ticket; the agent's name,
   tier and effort; the worktree, branch, base and head SHA; the files and line ranges worth reading; what is
-  ruled out; the skills to load; for a builder, what it may do (commit, push its branch, open the PR) and the
+  ruled out; the skills to load (for build work, always `production-readiness` unless the ticket is a labelled
+  spike or prototype); for a builder, what it may do (commit, push its branch, open the PR) and the
   `AGENTS.md` rule that allows it, quoted with the owner's words that trigger it (the rule is what allows the write;
   your own say-so never counts); and the exact report wanted back, short, with file:line. If your agent tool cannot
   set the effort, write it in the brief and say so in the gate record. Never let an agent review or QA its own
