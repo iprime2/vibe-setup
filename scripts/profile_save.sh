@@ -68,6 +68,7 @@ origin_of() {
       elif path_of "$ECC_SKILL_PATHS" "$n" >/dev/null; then echo "ECC ($ECC_REPO)|MIT"
       elif path_of "$CLOUDFLARE_SKILL_PATHS" "$n" >/dev/null; then echo "Cloudflare ($CLOUDFLARE_REPO)|MIT"
       elif path_of "$HERMES_SKILL_PATHS" "$n" >/dev/null; then echo "Hermes Agent ($HERMES_REPO)|MIT"
+      elif path_of "$MATTPOCOCK_SKILL_PATHS" "$n" >/dev/null; then echo "Matt Pocock ($MATTPOCOCK_REPO)|MIT"
       fi ;;
     agents/*) [ -f "$HERE/agents/$n.md" ] || echo "Agent Skills ($AGENT_SKILLS_REPO)|MIT" ;;
     commands/*) if has "$AGENT_COMMANDS" "$n"; then echo "Agent Skills ($AGENT_SKILLS_REPO)|MIT"; fi ;;
@@ -148,6 +149,7 @@ PROFILE_WSHOBSON_SHA="$WSHOBSON_SHA"
 PROFILE_ECC_SHA="$ECC_SHA"
 PROFILE_CLOUDFLARE_SHA="$CLOUDFLARE_SHA"
 PROFILE_HERMES_SHA="$HERMES_SHA"
+PROFILE_MATTPOCOCK_SHA="$MATTPOCOCK_SHA"
 PROFILE_PACKS="$PACKS_USED"
 EOF
 

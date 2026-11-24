@@ -159,7 +159,7 @@ fi
 
 # Resolve packs into items before anything is installed. Pack names are checked against packs.conf,
 # third-party skills against the pins in sources.lock, and a skill name may come from one source only.
-SEL_PACKS="" FP_SKILLS="" FP_AGENTS="" FP_COMMANDS="" TOB_SEL="" WSH_SEL="" ECC_SEL="" CF_SEL="" HM_SEL=""
+SEL_PACKS="" FP_SKILLS="" FP_AGENTS="" FP_COMMANDS="" TOB_SEL="" WSH_SEL="" ECC_SEL="" CF_SEL="" HM_SEL="" MP_SEL=""
 for p in ${PACK_ARGS//,/ }; do
   if [ "$p" = all ]; then p="$PACKS"; fi
   for q in $p; do
@@ -208,7 +208,11 @@ for p in $SEL_PACKS; do
         if has "$HM_SEL" "$n"; then continue; fi
         path_of "$HERMES_SKILL_PATHS" "$n" >/dev/null || die "pack $p: $n is not pinned in HERMES_SKILL_PATHS"
         take_skill "$n"; HM_SEL="${HM_SEL:+$HM_SEL }$n" ;;
-      *) die "pack $p: unknown item '$it' (expected skill:, agent:, command:, tob:, wsh:, ecc:, cf: or hm:)" ;;
+      mp:*)
+        if has "$MP_SEL" "$n"; then continue; fi
+        path_of "$MATTPOCOCK_SKILL_PATHS" "$n" >/dev/null || die "pack $p: $n is not pinned in MATTPOCOCK_SKILL_PATHS"
+        take_skill "$n"; MP_SEL="${MP_SEL:+$MP_SEL }$n" ;;
+      *) die "pack $p: unknown item '$it' (expected skill:, agent:, command:, tob:, wsh:, ecc:, cf:, hm: or mp:)" ;;
     esac
   done
 done
@@ -225,7 +229,7 @@ done
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-src="$tmp/agent-skills" tobsrc="$tmp/trailofbits" wshsrc="$tmp/wshobson" eccsrc="$tmp/ecc" cfsrc="$tmp/cloudflare" hmsrc="$tmp/hermes"
+src="$tmp/agent-skills" tobsrc="$tmp/trailofbits" wshsrc="$tmp/wshobson" eccsrc="$tmp/ecc" cfsrc="$tmp/cloudflare" hmsrc="$tmp/hermes" mpsrc="$tmp/mattpocock"
 
 echo "== fetch and check the pinned sources (nothing is installed until all pass)"
 echo "-- ponytail @ ${PONYTAIL_SHA:0:8}"
@@ -275,6 +279,11 @@ if [ -n "$HM_SEL" ]; then
   fetch_sparse "$HERMES_REPO" "$HERMES_SHA" "$hmsrc" "$HERMES_SKILL_PATHS"
   check_pinned_skills "$HERMES_REPO" "$hmsrc" "$HERMES_SKILL_PATHS" "$HM_SEL"
 fi
+if [ -n "$MP_SEL" ]; then
+  echo "-- mattpocock/skills @ ${MATTPOCOCK_SHA:0:8}"
+  fetch_commit "$MATTPOCOCK_REPO" "$MATTPOCOCK_SHA" "$mpsrc"
+  check_pinned_skills "$MATTPOCOCK_REPO" "$mpsrc" "$MATTPOCOCK_SKILL_PATHS" "$MP_SEL"
+fi
 
 echo "== graphify ($GRAPHIFY_SPEC)"
 if [ "$(id -u)" = 0 ]; then export UV_TOOL_BIN_DIR="${UV_TOOL_BIN_DIR:-/usr/local/bin}"; fi
@@ -320,6 +329,7 @@ if [ -n "$SEL_PACKS" ]; then
   install_pinned_skills "$eccsrc" "$ECC_SKILL_PATHS" "$ECC_SEL"
   install_pinned_skills "$cfsrc" "$CLOUDFLARE_SKILL_PATHS" "$CF_SEL"
   install_pinned_skills "$hmsrc" "$HERMES_SKILL_PATHS" "$HM_SEL"
+  install_pinned_skills "$mpsrc" "$MATTPOCOCK_SKILL_PATHS" "$MP_SEL"
 fi
 
 # Project scope: remember exactly what upstream looked like, so tailoring can be diffed and captured.
@@ -336,7 +346,7 @@ if [ "$SCOPE" = project ]; then
   done
   run rm -rf "${snap:?}"
   run mkdir -p "$snap/skills" "$snap/commands" "$snap/agents"
-  for s in ponytail $AGENT_SKILLS_LIST $FP_SKILLS $TOB_SEL $WSH_SEL $ECC_SEL $CF_SEL $HM_SEL; do run cp -R "$CLAUDE_DIR/skills/$s" "$snap/skills/$s"; done
+  for s in ponytail $AGENT_SKILLS_LIST $FP_SKILLS $TOB_SEL $WSH_SEL $ECC_SEL $CF_SEL $HM_SEL $MP_SEL; do run cp -R "$CLAUDE_DIR/skills/$s" "$snap/skills/$s"; done
   for c in $AGENT_COMMANDS $FP_COMMANDS; do run cp "$CLAUDE_DIR/commands/$c.md" "$snap/commands/$c.md"; done
   for a in "$src"/agents/*.md; do run cp "$CLAUDE_DIR/agents/$(basename "$a")" "$snap/agents/"; done
   for a in $FP_AGENTS; do run cp "$CLAUDE_DIR/agents/$a.md" "$snap/agents/"; done
@@ -355,7 +365,8 @@ if [ -n "$PROFILE" ]; then
      || { [ -n "$WSH_SEL" ] && [ "${PROFILE_WSHOBSON_SHA:-$WSHOBSON_SHA}" != "$WSHOBSON_SHA" ]; } \
      || { [ -n "$ECC_SEL" ] && [ "${PROFILE_ECC_SHA:-$ECC_SHA}" != "$ECC_SHA" ]; } \
      || { [ -n "$CF_SEL" ] && [ "${PROFILE_CLOUDFLARE_SHA:-$CLOUDFLARE_SHA}" != "$CLOUDFLARE_SHA" ]; } \
-     || { [ -n "$HM_SEL" ] && [ "${PROFILE_HERMES_SHA:-$HERMES_SHA}" != "$HERMES_SHA" ]; }; then
+     || { [ -n "$HM_SEL" ] && [ "${PROFILE_HERMES_SHA:-$HERMES_SHA}" != "$HERMES_SHA" ]; } \
+     || { [ -n "$MP_SEL" ] && [ "${PROFILE_MATTPOCOCK_SHA:-$MATTPOCOCK_SHA}" != "$MATTPOCOCK_SHA" ]; }; then
     echo "WARN: profile '$PROFILE' was tailored against different pins than sources.lock now has; re-review its CHANGES.diff before relying on it"
   fi
   if [ -d "$pdir/overrides" ]; then run cp -R "$pdir/overrides/." "$CLAUDE_DIR/"; fi
@@ -384,7 +395,7 @@ if [ "$DRY" != 1 ]; then
   # Names are matched whole, hyphens included: "code-review" does not match "code-review-and-quality".
   # One-word names ("scan") are ordinary words in prose, so only hyphenated names are checked.
   scan=("$CLAUDE_DIR"/commands/*.md "$CLAUDE_DIR"/agents/*.md)
-  for s in $FP_SKILLS $TOB_SEL $WSH_SEL $ECC_SEL $CF_SEL $HM_SEL; do
+  for s in $FP_SKILLS $TOB_SEL $WSH_SEL $ECC_SEL $CF_SEL $HM_SEL $MP_SEL; do
     if [ -f "$CLAUDE_DIR/skills/$s/SKILL.md" ]; then scan+=("$CLAUDE_DIR/skills/$s/SKILL.md"); fi
   done
   known=""
@@ -395,6 +406,7 @@ if [ "$DRY" != 1 ]; then
   if [ -n "$ECC_SEL" ]; then for d in "$eccsrc"/skills/*/; do known="$known skill:$(basename "$d")"; done; fi
   if [ -n "$CF_SEL" ]; then for d in "$cfsrc"/skills/*/; do known="$known skill:$(basename "$d")"; done; fi
   if [ -n "$HM_SEL" ]; then for d in $HERMES_SKILL_PATHS; do known="$known skill:${d##*/}"; done; fi
+  if [ -n "$MP_SEL" ]; then for d in "$mpsrc"/skills/*/*/; do known="$known skill:$(basename "$d")"; done; fi
   for k in $known; do
     n="${k#*:}"
     case "$n" in *-*) ;; *) continue ;; esac
