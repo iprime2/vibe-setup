@@ -1,6 +1,6 @@
 ---
 name: github-api
-description: Recipes for GitHub work by the project manager and the agents it starts - the GitHub tools of a connected GitHub MCP server first (the way a cloud session reaches GitHub), with REST through `gh api repos/{owner}/{repo}/...` as the fallback on your own machine and in CI; issue, PR and comment bodies written and read back; linking PRs to tickets; reviews as COMMENT events pinned to the head SHA; replying to and resolving review threads; sub-issues for epics; labels; the checks and job logs on a head; a merge pinned to the head; and board fields through a GitHub Projects connector. Use when reading or changing issues, PRs, reviews, labels or a Projects board, or when a GitHub call is refused. It grants no permission; the project's AGENTS.md decides which writes are allowed.
+description: Recipes for GitHub work by the project manager and the agents it starts - through the route the session's instructions name, either the GitHub tools of a connected GitHub MCP server or REST through `gh api repos/{owner}/{repo}/...` (the only route in cloud sessions whose built-in GitHub MCP server is retired, and the usual one on your own machine and in CI); issue, PR and comment bodies written and read back; linking PRs to tickets; reviews as COMMENT events pinned to the head SHA; replying to and resolving review threads; sub-issues for epics; labels; the checks and job logs on a head; a merge pinned to the head; and board fields through a GitHub Projects connector. Use when reading or changing issues, PRs, reviews, labels or a Projects board, or when a GitHub call is refused. It grants no permission; the project's AGENTS.md decides which writes are allowed.
 ---
 
 # GitHub API
@@ -13,10 +13,15 @@ before relying on it, and fix this file when you have.
 
 | Where | Use first | Fallback | May be refused |
 |---|---|---|---|
-| A cloud agent session (Claude Code on the web and similar) | The GitHub tools of the connected GitHub MCP server | For an agent without them (the builders): `git push` of its task branch, then the project manager does the GitHub step (opens the PR, posts the record) with the MCP tools; `gh api` only where the session's instructions allow `gh` | `gh` itself (often not installed, or not the supported path), GraphQL, and repositories outside the session's scope |
+| A cloud agent session (Claude Code on the web and similar) | The route the session's instructions name: the GitHub tools of a connected GitHub MCP server, or `gh api` REST where the built-in MCP server is retired (seen in a cloud session on 2026-11-23) | For an agent without that route (the builders): `git push` of its task branch, then the project manager does the GitHub step (opens the PR, posts the record) | Where only REST is supported: GraphQL and `gh` porcelain (`gh pr`, `gh issue`, `gh repo view`). Where MCP is the route: `gh` itself. Repositories outside the session's scope |
 | Your own machine | The GitHub MCP server's tools if one is configured, else `gh` | `gh api` REST and GraphQL on your own login | nothing known |
 | CI (GitHub Actions) | `gh api` with the job's token, within its `permissions:` | none | a user-owned Project with the job's own token (**verify**) |
 
+- **Read the session's instructions on GitHub first.** They say which route this session has. A retired MCP
+  server's tools disappear from the session; do not look for another way to reach them.
+- **REST only means REST only.** Where the instructions allow just `gh api` REST, a GraphQL-only job (resolving a
+  review thread, auto-merge, draft state) goes through the endpoint the instructions name for it, or to the owner.
+  `--paginate` can stop after the first page there: page with `per_page=100&page=N`.
 - **Find the tools by their suffix.** The server's tools are named `<prefix>__<tool>`, for example
   `mcp__github__pull_request_read`; the prefix depends on how the server is configured. If the session lists tools
   without their schemas, load the ones you need (by name, with the tool search) before the first call.
@@ -42,27 +47,27 @@ before relying on it, and fix this file when you have.
 
 ## 3. Recipes
 
-Each row gives the MCP tool (and its `method` where it has one) first, then the `gh api` fallback. A tool marked
-"used" was called this way in a cloud session; the others are listed by the server but **verify** their arguments
-the first time.
+Each row gives the MCP tool (and its `method` where it has one), then the `gh api` REST call. Use the column for
+your session's route. A tool or call marked "used" was run this way in a cloud session; **verify** the others'
+arguments the first time.
 
 | Job | GitHub MCP tool | `gh api` fallback |
 |---|---|---|
-| Read a PR: head and base SHA, state, merge state | `pull_request_read`, method `get` (used) | `repos/{owner}/{repo}/pulls/<n> --jq '.head.sha, .base.sha, .state, .mergeable_state'` |
+| Read a PR: head and base SHA, state, merge state | `pull_request_read`, method `get` (used) | `repos/{owner}/{repo}/pulls/<n> --jq '.head.sha, .base.sha, .state, .mergeable_state'` (used) |
 | The PR's changed files, or its diff | `pull_request_read`, methods `get_files` (used) and `get_diff` (**verify**) | `repos/{owner}/{repo}/pulls/<n>/files --paginate --jq '.[].filename'` |
 | Read an issue | `issue_read` (**verify**) | `repos/{owner}/{repo}/issues/<n> --jq '.title, .state, [.labels[].name]'` |
-| Open a PR | `create_pull_request` (used) | `-X POST repos/{owner}/{repo}/pulls -f title=... -f head=... -f base=... -F body=@<file>` |
+| Open a PR | `create_pull_request` (used) | `-X POST repos/{owner}/{repo}/pulls --input <file.json>` with `title`, `head`, `base` and `body` (used) |
 | Change a PR's title or body | `update_pull_request` (used) | `-X PATCH repos/{owner}/{repo}/pulls/<n> -F body=@<file>` |
 | Comment on an issue or a PR | `add_issue_comment` (**verify**) | `-X POST repos/{owner}/{repo}/issues/<n>/comments -F body=@<file>` |
-| The PR's comments, reviews and review threads | `pull_request_read`, methods `get_comments` (used), `get_reviews` and `get_review_comments` (**verify**) | `repos/{owner}/{repo}/pulls/<n>/comments --paginate` |
+| The PR's comments, reviews and review threads | `pull_request_read`, methods `get_comments` (used), `get_reviews` and `get_review_comments` (**verify**) | `repos/{owner}/{repo}/issues/<n>/comments?per_page=100` (used) and `.../pulls/<n>/comments?per_page=100`; threads where the session names an endpoint for them (one session used `repos/{owner}/{repo}/pulls/<n>/ccr/review_threads`) |
 | Reply to a review thread | `add_reply_to_pull_request_comment` (**verify**) | `-X POST repos/{owner}/{repo}/pulls/<n>/comments/<id>/replies -F body=@<file>` |
-| Resolve a review thread | `resolve_review_thread` (**verify**) | none in REST (GraphQL `resolveReviewThread` on your own machine) |
+| Resolve a review thread | `resolve_review_thread` (**verify**) | none in plain REST: the endpoint the session's instructions name, or GraphQL `resolveReviewThread` on your own machine |
 | Post a review (section 3.2) | `pull_request_review_write` and `add_comment_to_pending_review` (**verify**) | `-X POST repos/{owner}/{repo}/pulls/<n>/reviews --input <file>` |
-| The checks and statuses on the head | `pull_request_read`, methods `get_check_runs` and `get_status` (used) | `repos/{owner}/{repo}/commits/<sha>/check-runs` and `.../status` |
+| The checks and statuses on the head | `pull_request_read`, methods `get_check_runs` and `get_status` (used) | `repos/{owner}/{repo}/commits/<sha>/check-runs` (used) and `.../status` |
 | A failed job's log | `get_job_logs` with `job_id` and `return_content` (used), or `run_id` with `failed_only` (**verify**) | the whole command `gh run view <run-id> --log-failed` (not a `gh api` path) |
 | Sub-issues of an epic | `sub_issue_write` (**verify**) | `repos/{owner}/{repo}/issues/<epic>/sub_issues` (the ticket's numeric `id`, not its number) |
 | Labels on an issue | `issue_write` (**verify** the field) | `-X POST repos/{owner}/{repo}/issues/<n>/labels -f 'labels[]=<name>'` |
-| Merge, pinned to the head (section 3.4) | `merge_pull_request` with `merge_method` and `expectedHeadSha` (used) | `-X PUT repos/{owner}/{repo}/pulls/<n>/merge -f merge_method=squash -f sha=<head sha>` |
+| Merge, pinned to the head (section 3.4) | `merge_pull_request` with `merge_method` and `expectedHeadSha` (used) | `-X PUT repos/{owner}/{repo}/pulls/<n>/merge -f merge_method=squash -f sha=<head sha>` (used) |
 
 ### 3.1 Bodies: write, then read back
 
@@ -139,7 +144,8 @@ project, its fields and items and write an item's field value (one server names 
 
 ## 5. To verify
 
-- The arguments of the MCP tools marked **verify** in section 3, and of the review flow in section 3.2.
+- The arguments of the MCP tools and REST calls marked **verify** in section 3, and of the review flow in
+  section 3.2.
 - How your session resolves a review thread.
 - How the API wants a label name with a colon encoded, and whether adding an unknown label creates it.
 - The Projects connector's tool names and arguments.
