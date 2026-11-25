@@ -431,6 +431,20 @@ if [ "$RULES" = 1 ]; then
   run python3 -I "$HERE/scripts/append_block.py" "$CLAUDE_DIR/CLAUDE.md" "$HERE/rules/CLAUDE.md"
 fi
 
+# Project scope: record the vibe-setup commit this toolkit came from, so session-start.sh can say when main has
+# moved on. Not sourced by anything: session-start.sh parses the one line it needs.
+if [ "$SCOPE" = project ]; then
+  vfile="$CLAUDE_DIR/.vibe-setup/version"
+  echo "+ write $vfile"
+  if [ "$DRY" != 1 ]; then
+    commit="$(git -C "$HERE" rev-parse HEAD 2>/dev/null || true)"
+    [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || commit="unknown"
+    mkdir -p "$CLAUDE_DIR/.vibe-setup"
+    printf '# The vibe-setup commit this toolkit was installed from. Written by bootstrap.sh, read by session-start.sh.\nVIBE_SETUP_COMMIT="%s"\nVIBE_SETUP_INSTALLED="%s"\n' \
+      "$commit" "$(date -u +%Y-%m-%d)" > "$vfile"
+  fi
+fi
+
 echo "== summary"
 if [ "$DRY" != 1 ]; then
   graphify --version

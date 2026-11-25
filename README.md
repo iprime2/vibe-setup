@@ -325,7 +325,7 @@ before relying on it, and a newer correction wins; a saved handoff is never edit
 | `LICENSE` | MIT licence for this repo's own files |
 | `SETUP_PROMPT.md` | The prompt to paste into a new session |
 | `bootstrap.sh` | Installer: `--scope user\|project`, `--pack NAME[,NAME]`, `--profile NAME`, `--with-rules`, `--force`, `--dry-run` |
-| `session-start.sh` | New session in a project that commits its `.claude/`: installs graphify's CLI, reports drift, changes nothing |
+| `session-start.sh` | New session in a project that commits its `.claude/`: installs graphify's CLI, reports drift and whether vibe-setup's `main` has moved on since the install, changes nothing |
 | `project-init.sh` | Per-project graphify wiring and a code-only graph build |
 | `sources.lock` | Allowed sources and pins |
 | `packs.conf` | Which items each optional pack installs |
@@ -355,6 +355,15 @@ Project scope also keeps a pristine copy of what it installed in `.claude/.vibe-
 tailoring can be diffed against upstream. Pack items are part of that copy, and the packs installed are
 recorded in `.claude/.vibe-setup/packs`. Re-run with the same `--pack` list: files of a pack you drop stay in
 `.claude/` and would look like tailoring to `profile_save.sh` (bootstrap warns when that happens).
+
+**Keeping a project current.** A project-scope install records the vibe-setup commit it came from in
+`.claude/.vibe-setup/version`. `session-start.sh` compares it with vibe-setup's `main` (`git ls-remote`; set
+`VIBE_SETUP_REMOTE` to ask another copy) and prints one "toolkit version" line: up to date; a `WARN` that `main` has
+moved on, with the number of commits when the vibe-setup clone has both; or "unknown" for an install from before
+the stamp or from a copy without git history. It never updates anything. To update, ask for a toolkit refresh
+(`SETUP_PROMPT.md`, step 2b), which re-runs bootstrap after checking that no unsaved tailoring would be lost,
+then commit the refreshed `.claude/`. The stamp records the commit only: local, uncommitted edits to the
+vibe-setup clone are not captured.
 
 `project-init.sh` (run inside a git repo) adds graphify's hooks and git hooks, appends `graphify-out/` to
 `.gitignore`, and builds the graph from code only (AST) with a stripped environment, so no API key can be used.
@@ -387,8 +396,8 @@ is public, and anything committed stays readable in its git history.
 
 ## Tested (2026-10-26, Linux container, throwaway HOME)
 
-Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 358 checks
-on 2026-11-24; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
+Every check in the bullets before "Fresh cloud sessions" is scripted in `tests/` (`bash tests/run.sh`, 369 checks
+on 2026-11-25; CI runs it on every pull request). They never touch the real `~/.claude` or uv tools. The
 cloud-session results are manual.
 
 - Dry run (graphify's dependencies date-pinned with `--exclude-newer`); full install; re-run (no duplicates);
@@ -400,6 +409,10 @@ cloud-session results are manual.
 - `--with-rules` writes its block above graphify's `CLAUDE.md` section and replaces it in place on re-run.
 - Fail-open rewrite of graphify's hooks keeps other settings keys and valid JSON.
 - `--scope project`, and `project-init.sh` on a scratch repo (report says 0 input / 0 output tokens).
+- The toolkit version: a project install records the vibe-setup commit (a user install writes no stamp);
+  `session-start.sh` against a local bare repo reports up to date, warns once `main` moves and names the refresh,
+  reports an unreachable remote, a copy without git history and an install from before the stamp, always exits
+  0, and changes nothing under `.claude/`.
 
 - Profiles: tweak, remove and add files in a project install, capture with `profile_save.sh`, replay in a fresh
   project (all changes present, `PROJECT.md` block once), re-run (one block, above graphify's section; a block
