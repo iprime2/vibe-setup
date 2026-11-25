@@ -120,6 +120,37 @@ n=$(count "$SNAP/skills");   if [ "$n" -eq "$NSKILLS" ]; then ok "snapshot skill
 n=$(count "$SNAP/commands"); if [ "$n" -eq "$NCMDS" ]; then ok "snapshot commands: $NCMDS"; else bad "snapshot commands: $n, wanted $NCMDS"; fi
 n=$(count "$SNAP/agents");   m=$(count "$P/agents"); if [ "$n" -eq "$m" ] && [ "$n" -gt 0 ]; then ok "snapshot agents: $n"; else bad "snapshot agents: $n vs $m"; fi
 check "the snapshot excludes graphify's generated skill" test ! -e "$SNAP/skills/graphify"
+check "the install records the vibe-setup commit it came from" grep -qx "VIBE_SETUP_COMMIT=\"$(git -C "$REPO" rev-parse HEAD)\"" "$P/.vibe-setup/version"
+check "a user-scope install writes no version file" test ! -e "$HOME/.claude/.vibe-setup/version"
+
+echo "== session-start.sh reports the toolkit version"
+RM="$W/vs-remote.git"; git init -q --bare "$RM"
+git -C "$W" init -q vs-work && git -C "$W/vs-work" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty -m one
+git -C "$W/vs-work" push -q "$RM" HEAD:refs/heads/main
+one="$(git -C "$W/vs-work" rev-parse HEAD)"
+cp "$P/.vibe-setup/version" "$W/version.orig"
+printf 'VIBE_SETUP_COMMIT="%s"\n' "$one" > "$P/.vibe-setup/version"
+cd "$W/proj" || exit 2
+before="$(cd "$P" && find . -type f -exec cat {} + | cksum)"
+capture env VIBE_SETUP_REMOTE="$RM" bash "$REPO/session-start.sh"
+expect_rc "session-start exits 0" 0
+check "session-start changes nothing under .claude/" test "$before" = "$(cd "$P" && find . -type f -exec cat {} + | cksum)"
+expect_out "an install from main's head is up to date" "up to date: installed from main at ${one:0:8}"
+git -C "$W/vs-work" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty -m two
+git -C "$W/vs-work" push -q "$RM" HEAD:refs/heads/main
+capture env VIBE_SETUP_REMOTE="$RM" bash "$REPO/session-start.sh"
+expect_rc "still exits 0 when main has moved" 0
+expect_out "it warns that main has moved and names the refresh" "WARN: the toolkit here was installed from ${one:0:8}; vibe-setup main is now .*toolkit refresh"
+capture env VIBE_SETUP_REMOTE="$W/no-such-remote" bash "$REPO/session-start.sh"
+expect_out "an unreachable remote is reported, not fatal" "could not reach .* to compare with main"
+expect_rc "and exits 0" 0
+printf 'VIBE_SETUP_COMMIT="unknown"\n' > "$P/.vibe-setup/version"
+capture env VIBE_SETUP_REMOTE="$RM" bash "$REPO/session-start.sh"
+expect_out "an install from a copy without git history says so" "installed from a copy of vibe-setup without git history"
+rm "$P/.vibe-setup/version"
+capture env VIBE_SETUP_REMOTE="$RM" bash "$REPO/session-start.sh"
+expect_out "an install from before the stamp says so and points to the refresh" "unknown: this toolkit was installed before .*toolkit refresh"
+cp "$W/version.orig" "$P/.vibe-setup/version"
 
 echo "== project-init.sh"
 mkdir -p "$W/nogit"; cd "$W/nogit" || exit 2
