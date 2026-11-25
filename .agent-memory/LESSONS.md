@@ -10,11 +10,12 @@ verify before relying on one, and the user's instructions always win.
 - Why: a clone or a lookup goes stale within minutes; both times the work had already been merged
 - Scope: generic
 - Status: confirmed
-- Seen: 3, last 2026-11-23
+- Seen: 4, last 2026-11-24
 - Evidence:
   - 2026-10-26: another session reported the pack work missing; `git ls-remote` showed it merged in PR #8 (main 747acc5)
   - 2026-10-27: I reported PR #11 as still open from a pull request list fetched earlier; it had been merged at 09:25 UTC, a minute before
   - 2026-11-23: a merge-conflict notice for PR #25 arrived after the fix was pushed; a fresh read showed it mergeable at e41f2bb
+  - 2026-11-24: a CI-finished notice for PR #32 arrived after it had been merged (main d626733); nothing was left to do
 
 ### rerunning-bootstrap-replaces-tailoring
 - When: bootstrap.sh is about to run again in a project whose `.claude/` may already hold tailoring
@@ -102,3 +103,14 @@ verify before relying on one, and the user's instructions always win.
 - Seen: 1, last 2026-11-24
 - Evidence:
   - 2026-11-24: a manual `--pack product` run with a new HOME stopped at `uv tool install`; the same run in the earlier HOME passed
+
+### snapshot-right-around-the-command-under-test
+- When: a test checks that a command changes nothing (a cksum or listing before and after)
+- Do: take the "before" snapshot after the test's own setup writes and immediately before the command, and compare right after it
+- Not: one snapshot at the start of a section whose setup later edits the same files
+- Why: setup edits in between make the check fail for the wrong reason, or, once worked around, prove nothing about the command
+- Scope: generic
+- Status: candidate
+- Seen: 1, last 2026-11-25
+- Evidence:
+  - 2026-11-25: the session-start "changes nothing" check failed because the test rewrote the version file after its snapshot; fixed by snapshotting around one run (PR #33)
